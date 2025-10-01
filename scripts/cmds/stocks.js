@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "2.2",
+    version: "2.3",
     author: "James Dahao",
     role: 2,
     shortDescription: {
@@ -36,12 +36,17 @@ module.exports = {
         let seeds = data.filter(item => item.category === "SEEDS");
         let gear = data.filter(item => item.category === "GEAR");
 
+        // Convert timestamp to PH time (GMT+8)
+        const date = new Date(res.data.timestamp);
+        const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+
         let msg = "🌱 Available Stocks 🌱\n\n";
+        msg += `⏱️ Time:\n${phTime} (PH)\n\n`;
 
         if (seeds.length > 0) {
           msg += "🌾 Seeds:\n";
           seeds.forEach(item => {
-            msg += `- ${item.name}: ${item.stock} in stock\n`;
+            msg += `• ${item.name}: ${item.stock} in stock\n`;
           });
           msg += "\n";
         }
@@ -49,12 +54,12 @@ module.exports = {
         if (gear.length > 0) {
           msg += "⚔️ Gear:\n";
           gear.forEach(item => {
-            msg += `- ${item.name}: ${item.stock} in stock\n`;
+            msg += `• ${item.name}: ${item.stock} in stock\n`;
           });
           msg += "\n";
         }
 
-        msg += `📡 Source: ${res.data.source}\n🕒 Last Updated: ${new Date(res.data.timestamp).toLocaleString()}`;
+        msg += "📝 Note:\nIf time is ≠ to your time means API is down";
 
         return msg;
       } catch (err) {
