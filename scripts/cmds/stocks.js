@@ -13,11 +13,11 @@ module.exports = {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays the current stocks from Plants vs Brainrots stock tracker API. Auto-send aligns every 5 minutes + 10 seconds (like 00:10, 05:10, 10:10...)."
+      en: "Fetches and displays the current stocks from Plants vs Brainrots stock tracker API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...)."
     },
     category: "Utility",
     guide: {
-      en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m10s\n{p}stocks off → Stop auto-send"
+      en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m30s\n{p}stocks off → Stop auto-send"
     }
   },
 
@@ -36,7 +36,6 @@ module.exports = {
         let seeds = data.filter(item => item.category === "SEEDS");
         let gear = data.filter(item => item.category === "GEAR");
 
-        // Convert timestamp to PH time (GMT+8)
         const date = new Date(res.data.timestamp);
         const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
@@ -70,7 +69,7 @@ module.exports = {
     function scheduleNextRun() {
       const now = new Date();
       const next = new Date(now);
-      next.setSeconds(10);
+      next.setSeconds(30);
       next.setMilliseconds(0);
       const minutes = now.getMinutes();
       next.setMinutes(minutes - (minutes % 5) + 5);
@@ -88,7 +87,7 @@ module.exports = {
       if (JamesDahao[threadID]) {
         return api.sendMessage("⚠️ Auto stock updates are already running here.", threadID);
       }
-      api.sendMessage("✅ Auto stock updates started. I’ll send every 5 minutes + 10 seconds aligned to the clock.", threadID);
+      api.sendMessage("✅ Auto stock updates started.", threadID);
       scheduleNextRun();
       return;
     }
