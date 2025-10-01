@@ -5,19 +5,19 @@ const JamesDahao = {};
 module.exports = {
   config: {
     name: "stocks",
-    aliases: ["stock", "items"],
-    version: "2.1",
+    aliases: ["stock", "item"],
+    version: "2.2",
     author: "James Dahao",
-    role: 0,
+    role: 2,
     shortDescription: {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays the current stocks from Plants vs Brainrots stock tracker API. Can also auto-send every 5 minutes + 10 seconds."
+      en: "Fetches and displays the current stocks from Plants vs Brainrots stock tracker API. Auto-send aligns every 5 minutes + 10 seconds (like 00:10, 05:10, 10:10...)."
     },
     category: "Utility",
     guide: {
-      en: "{p}stocks → Show once\n{p}stocks on → Auto-send every 5m10s\n{p}stocks off → Stop auto-send"
+      en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m10s\n{p}stocks off → Stop auto-send"
     }
   },
 
@@ -62,15 +62,29 @@ module.exports = {
       }
     }
 
+    function scheduleNextRun() {
+      const now = new Date();
+      const next = new Date(now);
+      next.setSeconds(10);
+      next.setMilliseconds(0);
+      const minutes = now.getMinutes();
+      next.setMinutes(minutes - (minutes % 5) + 5);
+
+      const delay = next.getTime() - now.getTime();
+
+      JamesDahao[threadID] = setTimeout(async function run() {
+        const msg = await fetchStocks();
+        api.sendMessage(msg, threadID);
+        scheduleNextRun();
+      }, delay);
+    }
+
     if (args[0] && args[0].toLowerCase() === "on") {
       if (JamesDahao[threadID]) {
         return api.sendMessage("⚠️ Auto stock updates are already running here.", threadID);
       }
-      api.sendMessage("✅ Auto stock updates started. I’ll send updates every 5 minutes + 10 seconds.", threadID);
-      JamesDahao[threadID] = setInterval(async () => {
-        const msg = await fetchStocks();
-        api.sendMessage(msg, threadID);
-      }, 310 * 1000);
+      api.sendMessage("✅ Auto stock updates started. I’ll send every 5 minutes + 10 seconds aligned to the clock.", threadID);
+      scheduleNextRun();
       return;
     }
 
@@ -78,7 +92,7 @@ module.exports = {
       if (!JamesDahao[threadID]) {
         return api.sendMessage("⚠️ No auto stock updates running here.", threadID);
       }
-      clearInterval(JamesDahao[threadID]);
+      clearTimeout(JamesDahao[threadID]);
       delete JamesDahao[threadID];
       return api.sendMessage("🛑 Auto stock updates stopped.", threadID);
     }
