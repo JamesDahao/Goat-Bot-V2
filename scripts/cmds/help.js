@@ -28,14 +28,15 @@ module.exports = {
 			pageNotFound: "⚠️ Page %1 does not exist.",
 			commandNotFound: "⚠️ Command \"%1\" not found.",
 			helpList:
-				"╔═════•| 💜 |•═════╗\n" +
-				" GOAT-BOT 𝐏𝐑𝐎𝐉𝐄𝐂𝐓\n" +
-				"╚═════•| 💜 |•═════╝\n\n" +
-				"📜 𝐏𝐀𝐆𝐄 %1/%2 📜\n\n",
+				"╔═════•| 🤖 |•═════╗\n" +
+				" Plant vs Brainrot Bot\n" +
+				"╚═════•| 🤖 |•═════╝\n\n" +
+				"📜 𝐏𝐀𝐆𝐄 %1/%2 📜\n\n" +
+				"%3",
 
 			commandInfo:
 				"╔═════•| 📖 |•═════╗\n" +
-				"   𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐃𝐄𝐓𝐀𝐈𝐋𝐒\n" +
+				" COMMAND INFORMATION\n" +
 				"╚═════•| 📖 |•═════╝\n\n" +
 				"🔹 Name: %1\n" +
 				"🔹 Description: %2\n" +
