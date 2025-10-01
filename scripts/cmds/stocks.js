@@ -26,7 +26,7 @@ module.exports = {
 
     async function fetchStocks() {
       try {
-        const res = await axios.get("https://plantsvsbrainrotsstocktracker.com/api/stock");
+        const res = await axios.get("https://plantsvsbrainrotsstocktracker.com/api/stock?since=0");
         const data = res.data.data;
 
         if (!data || data.length === 0) {
