@@ -6,14 +6,14 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "2.3",
+    version: "3.0",
     author: "James Dahao",
     role: 2,
     shortDescription: {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays the current stocks from Plants vs Brainrots stock tracker API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...)."
+      en: "Fetches and displays the current stocks from Plants vs Brainrots Wikia stock API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...)."
     },
     category: "Utility",
     guide: {
@@ -26,17 +26,17 @@ module.exports = {
 
     async function fetchStocks() {
       try {
-        const res = await axios.get("https://plantsvsbrainrotsstocktracker.com/api/stock?since=0");
-        const data = res.data.data;
+        const res = await axios.get("https://plantsvsbrainrotswikia.com/api/stock/current");
+        const data = res.data.items;
 
         if (!data || data.length === 0) {
           return "⚠️ No stock data available.";
         }
 
-        let seeds = data.filter(item => item.category === "SEEDS");
-        let gear = data.filter(item => item.category === "GEAR");
+        let seeds = data.filter(item => item.category === "plants");
+        let gear = data.filter(item => item.category === "gear");
 
-        const date = new Date(res.data.timestamp);
+        const date = new Date(res.data.updatedAt);
         const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
         let msg = "🌱 Available Stocks 🌱\n\n";
@@ -45,7 +45,7 @@ module.exports = {
         if (seeds.length > 0) {
           msg += "🌾 Seeds:\n";
           seeds.forEach(item => {
-            msg += `• ${item.name}: ${item.stock} in stock\n`;
+            msg += `• ${item.name.replace(/ Seed$/i, "")}: ${item.currentStock} in stock\n`;
           });
           msg += "\n";
         }
@@ -53,7 +53,7 @@ module.exports = {
         if (gear.length > 0) {
           msg += "⚔️ Gear:\n";
           gear.forEach(item => {
-            msg += `• ${item.name}: ${item.stock} in stock\n`;
+            msg += `• ${item.name}: ${item.currentStock} in stock\n`;
           });
           msg += "\n";
         }
