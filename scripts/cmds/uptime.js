@@ -27,18 +27,14 @@ module.exports = {
 
     const uptimeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-    const message = `
-➽────────────────❥
+    const message = 
 🤖 Bot Uptime Information 🤖
 
 ⏳ Total Time Running:
 💫 ${uptimeString}
 
-👑 Bot by: @Aminusardar
-🔗 Facebook: https://www.facebook.com/100071880593545
-🎯 Enjoy using the bot! 💖
-➽────────────────❥
-`;
+👑 Bot by: @James Dahao
+🔗 Facebook: https://www.facebook.com/profile.php?id=100044075747232;
 
     return api.sendMessage(message, event.threadID);
   }
