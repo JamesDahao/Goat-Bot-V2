@@ -6,14 +6,14 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "3.0",
+    version: "3.2",
     author: "James Dahao",
     role: 2,
     shortDescription: {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays the current stocks from Plants vs Brainrots Wikia stock API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...)."
+      en: "Fetches and displays the current stocks from Plants vs Brainrots Wikia stock API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...).\nIf Mr Carrot, Tomatrio, or Shroombino are available → bot will append @all."
     },
     category: "Utility",
     guide: {
@@ -30,7 +30,7 @@ module.exports = {
         const data = res.data.items;
 
         if (!data || data.length === 0) {
-          return "⚠️ No stock data available.";
+          return { body: "⚠️ No stock data available." };
         }
 
         let seeds = data.filter(item => item.category === "plants");
@@ -60,9 +60,28 @@ module.exports = {
 
         msg += "📝 Note:\nIf time is ≠ to your time means API is down";
 
-        return msg;
+        // 🔹 Check for special stocks
+        const keywords = ["Mr Carrot", "Tomatrio", "Shroombino"];
+        const found = data.filter(item =>
+          keywords.some(key => item.name.toLowerCase().includes(key.toLowerCase())) &&
+          item.currentStock > 0
+        );
+
+        if (found.length > 0) {
+          const threadInfo = await api.getThreadInfo(threadID);
+          const mentions = threadInfo.participantIDs.map(uid => ({
+            tag: "@all",
+            id: uid
+          }));
+
+          msg += "\n\n@all";
+
+          return { body: msg, mentions };
+        }
+
+        return { body: msg };
       } catch (err) {
-        return "❌ Failed to fetch stock data.";
+        return { body: "❌ Failed to fetch stock data." };
       }
     }
 
