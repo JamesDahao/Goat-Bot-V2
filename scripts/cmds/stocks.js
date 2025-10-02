@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "3.2",
+    version: "3.3",
     author: "James Dahao",
     role: 2,
     shortDescription: {
@@ -23,6 +23,27 @@ module.exports = {
 
   onStart: async function ({ api, event, args }) {
     const threadID = event.threadID;
+    
+    const emojiMap = {
+      "Cactus": "🌵",
+      "Strawberry": "🍓",
+      "Pumpkin": "🎃",
+      "Sunflower": "🌻",
+      "Dragon Fruit": "🐉",
+      "Eggplant": "🍆",
+      "Watermelon": "🍉",
+      "Grape": "🍇",
+      "Cocotank": "🥥",
+      "Carnivorous Plant": "🥩",
+      "Mr Carrot": "🥕",
+      "Tomatrio": "🍅",
+      "Shroombino": "🍄",
+      "Water Bucket": "🪣",
+      "Frost Grenade": "💣",
+      "Banana Gun": "🔫",
+      "Frost Blower": "❄️",
+      "Carrot Launcher": "🚀"
+    };
 
     async function fetchStocks() {
       try {
@@ -45,7 +66,9 @@ module.exports = {
         if (seeds.length > 0) {
           msg += "🌾 Seeds:\n";
           seeds.forEach(item => {
-            msg += `• ${item.name.replace(/ Seed$/i, "")}: ${item.currentStock} in stock\n`;
+            const name = item.name.replace(/ Seed$/i, "");
+            const emoji = emojiMap[name] || "•";
+            msg += `${emoji} ${name}: ${item.currentStock} in stock\n`;
           });
           msg += "\n";
         }
@@ -53,7 +76,9 @@ module.exports = {
         if (gear.length > 0) {
           msg += "⚔️ Gear:\n";
           gear.forEach(item => {
-            msg += `• ${item.name}: ${item.currentStock} in stock\n`;
+            const name = item.name;
+            const emoji = emojiMap[name] || "•";
+            msg += `${emoji} ${name}: ${item.currentStock} in stock\n`;
           });
           msg += "\n";
         }
