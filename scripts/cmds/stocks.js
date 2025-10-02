@@ -2,18 +2,41 @@ const axios = require("axios");
 
 const JamesDahao = {};
 
+const emojiMap = {
+  cactus: "🌵",
+  strawberry: "🍓",
+  pumpkin: "🎃",
+  sunflower: "🌻",
+  "dragon fruit": "🐉",
+  eggplant: "🍆",
+  watermelon: "🍉",
+  grape: "🍇",
+  cocotank: "🥥",
+  carnivorous: "🥩",
+  "mr carrot": "🥕",
+  tomatrio: "🍅",
+  shroombino: "🍄",
+  "water bucket": "🪣",
+  "frost grenade": "💣",
+  "banana gun": "🔫",
+  "frost blower": "❄️",
+  "carrot launcher": "🚀"
+};
+
+const alertSeeds = ["mr carrot", "tomatrio", "shroombino"];
+
 module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "3.3",
+    version: "1.1",
     author: "James Dahao",
     role: 2,
     shortDescription: {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays the current stocks from Plants vs Brainrots Wikia stock API. Auto-send aligns every 5 minutes + 30 seconds (like 00:30, 05:30, 10:30...).\nIf Mr Carrot, Tomatrio, or Shroombino are available → bot will append @all."
+      en: "Fetches and displays current stocks. If Mr Carrot / Tomatrio / Shroombino appear with stock, bot will @all."
     },
     category: "Utility",
     guide: {
@@ -23,107 +46,94 @@ module.exports = {
 
   onStart: async function ({ api, event, args }) {
     const threadID = event.threadID;
-    
-    const emojiMap = {
-      "Cactus": "🌵",
-      "Strawberry": "🍓",
-      "Pumpkin": "🎃",
-      "Sunflower": "🌻",
-      "Dragon Fruit": "🐉",
-      "Eggplant": "🍆",
-      "Watermelon": "🍉",
-      "Grape": "🍇",
-      "Cocotank": "🥥",
-      "Carnivorous Plant": "🥩",
-      "Mr Carrot": "🥕",
-      "Tomatrio": "🍅",
-      "Shroombino": "🍄",
-      "Water Bucket": "🪣",
-      "Frost Grenade": "💣",
-      "Banana Gun": "🔫",
-      "Frost Blower": "❄️",
-      "Carrot Launcher": "🚀"
-    };
 
     async function fetchStocks() {
       try {
-        const res = await axios.get("https://plantsvsbrainrotswikia.com/api/stock/current");
-        const data = res.data.items;
-
-        if (!data || data.length === 0) {
-          return { body: "⚠️ No stock data available." };
-        }
-
-        let seeds = data.filter(item => item.category === "plants");
-        let gear = data.filter(item => item.category === "gear");
-
-        const date = new Date(res.data.updatedAt);
+        const res = await axios.get("https://plantsvsbrainrotsstocktracker.com/api/stock?since=0");
+        const data = res.data;
+        const items = data.items || [];
+        const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
+        const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
+        const date = new Date(data.updatedAt || Date.now());
         const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
-        let msg = "🌱 Available Stocks 🌱\n\n";
-        msg += `⏱️ Time:\n${phTime} (PH)\n\n`;
+        let body = "🌱 Available Stocks 🌱\n\n";
+        body += `⏱️ Time:\n${phTime} (PH)\n\n`;
+
+        let alertNeeded = false;
 
         if (seeds.length > 0) {
-          msg += "🌾 Seeds:\n";
-          seeds.forEach(item => {
-            const name = item.name.replace(/ Seed$/i, "");
-            const emoji = emojiMap[name] || "•";
-            msg += `${emoji} ${name}: ${item.currentStock} in stock\n`;
+          body += "🌾 Seeds:\n";
+          seeds.forEach(it => {
+            let cleanName = it.name.replace(/<:[^>]+>/g, "").replace(/ Seed$/i, "").trim();
+            const lower = cleanName.toLowerCase();
+            let matchedKey = null;
+            for (const key in emojiMap) {
+              if (lower.includes(key)) {
+                matchedKey = key;
+                break;
+              }
+            }
+            const emoji = matchedKey ? emojiMap[matchedKey] : "•";
+            body += `${emoji} ${cleanName}: ${it.currentStock} in stock\n`;
+            for (const seedName of alertSeeds) {
+              if (lower.includes(seedName) && it.currentStock > 0) {
+                alertNeeded = true;
+              }
+            }
           });
-          msg += "\n";
+          body += "\n";
         }
 
         if (gear.length > 0) {
-          msg += "⚔️ Gear:\n";
-          gear.forEach(item => {
-            const name = item.name;
-            const emoji = emojiMap[name] || "•";
-            msg += `${emoji} ${name}: ${item.currentStock} in stock\n`;
+          body += "⚔️ Gear:\n";
+          gear.forEach(it => {
+            let cleanName = it.name.replace(/<:[^>]+>/g, "").trim();
+            const lower = cleanName.toLowerCase();
+            let matchedKey = null;
+            for (const key in emojiMap) {
+              if (lower.includes(key)) {
+                matchedKey = key;
+                break;
+              }
+            }
+            const emoji = matchedKey ? emojiMap[matchedKey] : "•";
+            body += `${emoji} ${cleanName}: ${it.currentStock} in stock\n`;
           });
-          msg += "\n";
+          body += "\n";
         }
 
-        msg += "📝 Note:\nIf time is ≠ to your time means API is down";
+        body += "📝 Note:\nIf time is ≠ to your time means API is down";
 
-        // 🔹 Check for special stocks
-        const keywords = ["Mr Carrot", "Tomatrio", "Shroombino"];
-        const found = data.filter(item =>
-          keywords.some(key => item.name.toLowerCase().includes(key.toLowerCase())) &&
-          item.currentStock > 0
-        );
-
-        if (found.length > 0) {
+        if (alertNeeded) {
           const threadInfo = await api.getThreadInfo(threadID);
           const mentions = threadInfo.participantIDs.map(uid => ({
             tag: "@all",
             id: uid
           }));
-
-          msg += "\n\n@all";
-
-          return { body: msg, mentions };
+          body += `\n\n@all`;
+          return { body, mentions };
+        } else {
+          return { body };
         }
-
-        return { body: msg };
-      } catch (err) {
+      } catch {
         return { body: "❌ Failed to fetch stock data." };
       }
     }
 
-    function scheduleNextRun() {
+    function scheduleNext() {
       const now = new Date();
       const next = new Date(now);
       next.setSeconds(30);
       next.setMilliseconds(0);
-      const minutes = now.getMinutes();
-      next.setMinutes(minutes - (minutes % 5) + 5);
-
+      const m = now.getMinutes();
+      next.setMinutes(m - (m % 5) + 5);
       const delay = next.getTime() - now.getTime();
 
       JamesDahao[threadID] = setTimeout(async function run() {
-        const msg = await fetchStocks();
-        api.sendMessage(msg, threadID);
-        scheduleNextRun();
+        const msgObj = await fetchStocks();
+        api.sendMessage(msgObj, threadID);
+        scheduleNext();
       }, delay);
     }
 
@@ -132,7 +142,7 @@ module.exports = {
         return api.sendMessage("⚠️ Auto stock updates are already running here.", threadID);
       }
       api.sendMessage("✅ Auto stock updates started.", threadID);
-      scheduleNextRun();
+      scheduleNext();
       return;
     }
 
@@ -145,7 +155,7 @@ module.exports = {
       return api.sendMessage("🛑 Auto stock updates stopped.", threadID);
     }
 
-    const msg = await fetchStocks();
-    return api.sendMessage(msg, threadID);
+    const msgObj = await fetchStocks();
+    return api.sendMessage(msgObj, threadID);
   }
 };
