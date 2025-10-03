@@ -36,7 +36,7 @@ module.exports = {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays current stocks. Retries until refresh inside window."
+      en: "Fetches and displays current stocks. Retries if API didn’t refresh inside window."
     },
     category: "Utility",
     guide: {
@@ -47,7 +47,6 @@ module.exports = {
   onStart: async function ({ api, event, args }) {
     const threadID = event.threadID;
 
-    // ---- Fetch API stocks ----
     async function fetchStocks() {
       try {
         const res = await axios.get("https://plantsvsbrainrotsstocktracker.com/api/stock?since=0");
@@ -55,12 +54,11 @@ module.exports = {
         const items = data.items || [];
         const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
         const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
-
-        const updatedAt = new Date(data.updatedAt);
-        const phTime = new Date(updatedAt.getTime() + (8 * 60 * 60 * 1000)); // PH time
+        const date = new Date(data.updatedAt || Date.now());
+        const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
         let body = "🌱 Available Stocks 🌱\n\n";
-        body += `⏱️ API Time:\n${phTime.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}\n\n`;
+        body += `⏱️ Time:\n${phTime} (PH)\n\n`;
 
         let alertNeeded = false;
 
@@ -105,7 +103,7 @@ module.exports = {
           body += "\n";
         }
 
-        body += "📝 Note:\nIf API time ≠ PH time, API may be delayed.";
+        body += "📝 Note:\nIf time is ≠ to your time means API is down";
 
         if (alertNeeded) {
           const threadInfo = await api.getThreadInfo(threadID);
@@ -114,32 +112,34 @@ module.exports = {
             id: uid
           }));
           body += `\n\n@all`;
-          return { body, mentions, updatedAt };
+          return { body, mentions, updatedAt: date };
         } else {
-          return { body, updatedAt };
+          return { body, updatedAt: date };
         }
       } catch {
         return { body: "❌ Failed to fetch stock data." };
       }
     }
 
-    // ---- Window checker ----
     function isInWindow(apiTime) {
-      const now = new Date();
-      const phNow = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // UTC+8
-      const minute = Math.floor(phNow.getUTCMinutes() / 5) * 5;
+      const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+      const minute = Math.floor(phNow.getMinutes() / 5) * 5;
 
       const windowStart = new Date(phNow);
-      windowStart.setUTCMinutes(minute, 0, 0);
+      windowStart.setMinutes(minute, 0, 0);
 
       const windowEnd = new Date(windowStart);
-      windowEnd.setUTCMinutes(windowStart.getUTCMinutes() + 5, 0, 0);
+      windowEnd.setMinutes(windowStart.getMinutes() + 5, 0, 0);
       windowEnd.setSeconds(windowEnd.getSeconds() - 1);
+
+      console.log("PH Now:", phNow.toLocaleTimeString("en-PH"));
+      console.log("API Time:", apiTime.toLocaleTimeString("en-PH"));
+      console.log("Window Start:", windowStart.toLocaleTimeString("en-PH"));
+      console.log("Window End:", windowEnd.toLocaleTimeString("en-PH"));
 
       return apiTime >= windowStart && apiTime <= windowEnd;
     }
 
-    // ---- Attempt to send ----
     async function attemptSend(sentRetryFlag) {
       const result = await fetchStocks();
       if (result.updatedAt && isInWindow(result.updatedAt)) {
@@ -147,21 +147,20 @@ module.exports = {
         return true;
       } else {
         if (!sentRetryFlag.flag) {
-          api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s", threadID);
+          api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s until window ends", threadID);
           sentRetryFlag.flag = true;
         }
         return false;
       }
     }
 
-    // ---- Main scheduler ----
     function scheduleNext() {
       const now = new Date();
       const next = new Date(now);
-      next.setSeconds(20, 0);
+      next.setSeconds(20);
+      next.setMilliseconds(0);
       const m = now.getMinutes();
       next.setMinutes(m - (m % 5) + 5);
-
       const delay = next.getTime() - now.getTime();
 
       JamesDahao[threadID] = setTimeout(async function run() {
@@ -174,11 +173,12 @@ module.exports = {
               api.sendMessage(result, threadID);
               clearInterval(retryInterval);
             } else {
-              const nowPH = new Date(Date.now() + (8 * 60 * 60 * 1000));
-              const minute = Math.floor(nowPH.getUTCMinutes() / 5) * 5;
+              const nowPH = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+              const minute = Math.floor(nowPH.getMinutes() / 5) * 5;
               const windowEnd = new Date(nowPH);
-              windowEnd.setUTCMinutes(minute + 5, 0, 0);
+              windowEnd.setMinutes(minute + 5, 0, 0);
               windowEnd.setSeconds(windowEnd.getSeconds() - 1);
+
               if (nowPH > windowEnd) {
                 clearInterval(retryInterval);
               }
@@ -189,7 +189,6 @@ module.exports = {
       }, delay);
     }
 
-    // ---- Command control ----
     if (args[0] && args[0].toLowerCase() === "on") {
       if (JamesDahao[threadID]) {
         return api.sendMessage("⚠️ Auto stock updates are already running here.", threadID);
