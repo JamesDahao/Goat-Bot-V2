@@ -36,7 +36,7 @@ module.exports = {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays current stocks. If Mr Carrot / Tomatrio / Shroombino appear with stock, bot will @all."
+      en: "Fetches and displays current stocks. Sends retry if API didn’t refresh inside window."
     },
     category: "Utility",
     guide: {
@@ -54,23 +54,14 @@ module.exports = {
         const items = data.items || [];
         const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
         const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
-        const apiDate = new Date(data.updatedAt || Date.now());
-        const now = new Date();
-        const windowMinute = Math.floor(now.getMinutes() / 5) * 5;
-        const windowStart = new Date(now);
-        windowStart.setMinutes(windowMinute, 0, 0);
-        if (apiDate < windowStart) {
-          api.sendMessage("⚠️ API delay: stocks didn't refresh\nResending in 50s", threadID);
-          setTimeout(async () => {
-            const retryMsg = await fetchStocks();
-            if (retryMsg) api.sendMessage(retryMsg, threadID);
-          }, 50 * 1000);
-          return null;
-        }
-        const phTime = apiDate.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+        const date = new Date(data.updatedAt || Date.now());
+        const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+
         let body = "🌱 Available Stocks 🌱\n\n";
         body += `⏱️ Time:\n${phTime} (PH)\n\n`;
+
         let alertNeeded = false;
+
         if (seeds.length > 0) {
           body += "🌾 Seeds:\n";
           seeds.forEach(it => {
@@ -93,6 +84,7 @@ module.exports = {
           });
           body += "\n";
         }
+
         if (gear.length > 0) {
           body += "⚔️ Gear:\n";
           gear.forEach(it => {
@@ -110,7 +102,9 @@ module.exports = {
           });
           body += "\n";
         }
+
         body += "📝 Note:\nIf time is ≠ to your time means API is down";
+
         if (alertNeeded) {
           const threadInfo = await api.getThreadInfo(threadID);
           const mentions = threadInfo.participantIDs.map(uid => ({
@@ -118,12 +112,36 @@ module.exports = {
             id: uid
           }));
           body += `\n\n@all`;
-          return { body, mentions };
+          return { body, mentions, updatedAt: date };
         } else {
-          return { body };
+          return { body, updatedAt: date };
         }
       } catch {
         return { body: "❌ Failed to fetch stock data." };
+      }
+    }
+
+    function isInWindow(apiTime) {
+      const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+      const minute = Math.floor(phNow.getMinutes() / 5) * 5;
+      const windowStart = new Date(phNow);
+      windowStart.setMinutes(minute);
+      windowStart.setSeconds(0, 0);
+      const windowEnd = new Date(windowStart);
+      windowEnd.setMinutes(windowStart.getMinutes() + 5);
+      windowEnd.setSeconds(-1);
+
+      return apiTime >= windowStart && apiTime <= windowEnd;
+    }
+
+    async function attemptSend() {
+      const result = await fetchStocks();
+      if (result.updatedAt && isInWindow(result.updatedAt)) {
+        api.sendMessage(result, threadID);
+        return true;
+      } else {
+        api.sendMessage("⚠️ API delay: stocks didn't refresh\nResending in 30s", threadID);
+        return false;
       }
     }
 
@@ -135,9 +153,29 @@ module.exports = {
       const m = now.getMinutes();
       next.setMinutes(m - (m % 5) + 5);
       const delay = next.getTime() - now.getTime();
+
       JamesDahao[threadID] = setTimeout(async function run() {
-        const msgObj = await fetchStocks();
-        if (msgObj) api.sendMessage(msgObj, threadID);
+        let sent = await attemptSend();
+        if (!sent) {
+          const retryInterval = setInterval(async () => {
+            const result = await fetchStocks();
+            if (result.updatedAt && isInWindow(result.updatedAt)) {
+              api.sendMessage(result, threadID);
+              clearInterval(retryInterval);
+            } else {
+              const nowPH = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+              const minute = Math.floor(nowPH.getMinutes() / 5) * 5;
+              const windowEnd = new Date(nowPH);
+              windowEnd.setMinutes(minute + 5);
+              windowEnd.setSeconds(-1);
+              if (nowPH > windowEnd) {
+                clearInterval(retryInterval);
+              } else {
+                api.sendMessage("⚠️ API delay: still no refresh, retrying in 30s", threadID);
+              }
+            }
+          }, 30000);
+        }
         scheduleNext();
       }, delay);
     }
@@ -161,6 +199,6 @@ module.exports = {
     }
 
     const msgObj = await fetchStocks();
-    if (msgObj) return api.sendMessage(msgObj, threadID);
+    return api.sendMessage(msgObj, threadID);
   }
 };
