@@ -29,7 +29,7 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "1.2",
+    version: "1.3",
     author: "James Dahao",
     role: 2,
     shortDescription: {
@@ -130,17 +130,19 @@ module.exports = {
       const windowEnd = new Date(windowStart);
       windowEnd.setMinutes(windowStart.getMinutes() + 5);
       windowEnd.setSeconds(-1);
-
       return apiTime >= windowStart && apiTime <= windowEnd;
     }
 
-    async function attemptSend() {
+    async function attemptSend(sentRetryFlag) {
       const result = await fetchStocks();
       if (result.updatedAt && isInWindow(result.updatedAt)) {
         api.sendMessage(result, threadID);
         return true;
       } else {
-        api.sendMessage("⚠️ API delay: stocks didn't refresh\nResending in 30s", threadID);
+        if (!sentRetryFlag.flag) {
+          api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s until window ends", threadID);
+          sentRetryFlag.flag = true;
+        }
         return false;
       }
     }
@@ -155,7 +157,8 @@ module.exports = {
       const delay = next.getTime() - now.getTime();
 
       JamesDahao[threadID] = setTimeout(async function run() {
-        let sent = await attemptSend();
+        let sentRetryFlag = { flag: false };
+        let sent = await attemptSend(sentRetryFlag);
         if (!sent) {
           const retryInterval = setInterval(async () => {
             const result = await fetchStocks();
@@ -170,8 +173,6 @@ module.exports = {
               windowEnd.setSeconds(-1);
               if (nowPH > windowEnd) {
                 clearInterval(retryInterval);
-              } else {
-                api.sendMessage("⚠️ API delay: still no refresh, retrying in 30s", threadID);
               }
             }
           }, 30000);
