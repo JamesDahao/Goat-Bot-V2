@@ -29,7 +29,7 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "1.1",
+    version: "1.2",
     author: "James Dahao",
     role: 2,
     shortDescription: {
@@ -40,7 +40,7 @@ module.exports = {
     },
     category: "Utility",
     guide: {
-      en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m30s\n{p}stocks off → Stop auto-send"
+      en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m20s\n{p}stocks off → Stop auto-send"
     }
   },
 
@@ -54,14 +54,23 @@ module.exports = {
         const items = data.items || [];
         const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
         const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
-        const date = new Date(data.updatedAt || Date.now());
-        const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
-
+        const apiDate = new Date(data.updatedAt || Date.now());
+        const now = new Date();
+        const windowMinute = Math.floor(now.getMinutes() / 5) * 5;
+        const windowStart = new Date(now);
+        windowStart.setMinutes(windowMinute, 0, 0);
+        if (apiDate < windowStart) {
+          api.sendMessage("⚠️ API delay: stocks didn't refresh\nResending in 50s", threadID);
+          setTimeout(async () => {
+            const retryMsg = await fetchStocks();
+            if (retryMsg) api.sendMessage(retryMsg, threadID);
+          }, 50 * 1000);
+          return null;
+        }
+        const phTime = apiDate.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
         let body = "🌱 Available Stocks 🌱\n\n";
         body += `⏱️ Time:\n${phTime} (PH)\n\n`;
-
         let alertNeeded = false;
-
         if (seeds.length > 0) {
           body += "🌾 Seeds:\n";
           seeds.forEach(it => {
@@ -84,7 +93,6 @@ module.exports = {
           });
           body += "\n";
         }
-
         if (gear.length > 0) {
           body += "⚔️ Gear:\n";
           gear.forEach(it => {
@@ -102,9 +110,7 @@ module.exports = {
           });
           body += "\n";
         }
-
         body += "📝 Note:\nIf time is ≠ to your time means API is down";
-
         if (alertNeeded) {
           const threadInfo = await api.getThreadInfo(threadID);
           const mentions = threadInfo.participantIDs.map(uid => ({
@@ -124,15 +130,14 @@ module.exports = {
     function scheduleNext() {
       const now = new Date();
       const next = new Date(now);
-      next.setSeconds(30);
+      next.setSeconds(20);
       next.setMilliseconds(0);
       const m = now.getMinutes();
       next.setMinutes(m - (m % 5) + 5);
       const delay = next.getTime() - now.getTime();
-
       JamesDahao[threadID] = setTimeout(async function run() {
         const msgObj = await fetchStocks();
-        api.sendMessage(msgObj, threadID);
+        if (msgObj) api.sendMessage(msgObj, threadID);
         scheduleNext();
       }, delay);
     }
@@ -156,6 +161,6 @@ module.exports = {
     }
 
     const msgObj = await fetchStocks();
-    return api.sendMessage(msgObj, threadID);
+    if (msgObj) return api.sendMessage(msgObj, threadID);
   }
 };
