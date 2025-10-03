@@ -29,31 +29,30 @@ function convertToPH(date) {
   return new Date(new Date(date).toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 }
 
-function isInWindow(apiTimeRaw) {
-  const apiTime = convertToPH(apiTimeRaw);
+function isInWindow(apiTime) {
   const phNow = convertToPH(Date.now());
+  const apiPHTime = convertToPH(apiTime);
+
   const minute = Math.floor(phNow.getMinutes() / 5) * 5;
   const windowStart = new Date(phNow);
   windowStart.setMinutes(minute, 0, 0);
+
   const windowEnd = new Date(windowStart);
   windowEnd.setMinutes(windowStart.getMinutes() + 5, 0, 0);
   windowEnd.setSeconds(windowEnd.getSeconds() - 1);
-  return apiTime >= windowStart && apiTime <= windowEnd;
+
+  return apiPHTime >= windowStart && apiPHTime <= windowEnd;
 }
 
 module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "1.4",
+    version: "1.5",
     author: "James Dahao",
     role: 2,
-    shortDescription: {
-      en: "Check or auto-send available stocks from PVBR."
-    },
-    longDescription: {
-      en: "Fetches and displays current stocks."
-    },
+    shortDescription: { en: "Check or auto-send available stocks from PVBR." },
+    longDescription: { en: "Fetches and displays current stocks." },
     category: "Utility",
     guide: {
       en: "{p}stocks → Show once\n{p}stocks on → Auto-send aligned every 5m20s\n{p}stocks off → Stop auto-send"
@@ -70,8 +69,8 @@ module.exports = {
         const items = data.items || [];
         const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
         const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
-        const date = convertToPH(data.updatedAt || Date.now());
-        const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+        const date = data.updatedAt || Date.now();
+        const phTime = convertToPH(date).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
         let body = "🌱 Available Stocks 🌱\n\n";
         body += `⏱️ Time:\n${phTime} (PH)\n\n`;
