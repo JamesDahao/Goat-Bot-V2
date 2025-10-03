@@ -29,14 +29,14 @@ module.exports = {
   config: {
     name: "stocks",
     aliases: ["stock", "item"],
-    version: "1.3",
+    version: "1.4",
     author: "James Dahao",
     role: 2,
     shortDescription: {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays current stocks. Sends retry if API didn’t refresh inside window."
+      en: "Fetches and displays current stocks. Retries every 30s if API didn’t refresh inside window."
     },
     category: "Utility",
     guide: {
@@ -121,15 +121,19 @@ module.exports = {
       }
     }
 
-    function isInWindow(apiTime) {
+    function getWindowRange() {
       const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
       const minute = Math.floor(phNow.getMinutes() / 5) * 5;
       const windowStart = new Date(phNow);
-      windowStart.setMinutes(minute);
-      windowStart.setSeconds(0, 0);
+      windowStart.setMinutes(minute, 0, 0);
       const windowEnd = new Date(windowStart);
       windowEnd.setMinutes(windowStart.getMinutes() + 5);
       windowEnd.setSeconds(-1);
+      return { windowStart, windowEnd };
+    }
+
+    function isInWindow(apiTime) {
+      const { windowStart, windowEnd } = getWindowRange();
       return apiTime >= windowStart && apiTime <= windowEnd;
     }
 
@@ -140,7 +144,7 @@ module.exports = {
         return true;
       } else {
         if (!sentRetryFlag.flag) {
-          api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s until window ends", threadID);
+          api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s", threadID);
           sentRetryFlag.flag = true;
         }
         return false;
@@ -150,15 +154,15 @@ module.exports = {
     function scheduleNext() {
       const now = new Date();
       const next = new Date(now);
-      next.setSeconds(20);
-      next.setMilliseconds(0);
+      next.setSeconds(20, 0);
       const m = now.getMinutes();
       next.setMinutes(m - (m % 5) + 5);
       const delay = next.getTime() - now.getTime();
 
       JamesDahao[threadID] = setTimeout(async function run() {
-        let sentRetryFlag = { flag: false };
+        let sentRetryFlag = { flag: false }; // reset each window
         let sent = await attemptSend(sentRetryFlag);
+
         if (!sent) {
           const retryInterval = setInterval(async () => {
             const result = await fetchStocks();
@@ -166,17 +170,15 @@ module.exports = {
               api.sendMessage(result, threadID);
               clearInterval(retryInterval);
             } else {
+              const { windowEnd } = getWindowRange();
               const nowPH = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-              const minute = Math.floor(nowPH.getMinutes() / 5) * 5;
-              const windowEnd = new Date(nowPH);
-              windowEnd.setMinutes(minute + 5);
-              windowEnd.setSeconds(-1);
               if (nowPH > windowEnd) {
-                clearInterval(retryInterval);
+                clearInterval(retryInterval); // stop retries if window ended
               }
             }
           }, 30000);
         }
+
         scheduleNext();
       }, delay);
     }
