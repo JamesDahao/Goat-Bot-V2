@@ -25,6 +25,22 @@ const emojiMap = {
 
 const alertSeeds = ["mr carrot", "tomatrio", "shroombino"];
 
+function convertToPH(date) {
+  return new Date(new Date(date).toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+}
+
+function isInWindow(apiTimeRaw) {
+  const apiTime = convertToPH(apiTimeRaw);
+  const phNow = convertToPH(Date.now());
+  const minute = Math.floor(phNow.getMinutes() / 5) * 5;
+  const windowStart = new Date(phNow);
+  windowStart.setMinutes(minute, 0, 0);
+  const windowEnd = new Date(windowStart);
+  windowEnd.setMinutes(windowStart.getMinutes() + 5, 0, 0);
+  windowEnd.setSeconds(windowEnd.getSeconds() - 1);
+  return apiTime >= windowStart && apiTime <= windowEnd;
+}
+
 module.exports = {
   config: {
     name: "stocks",
@@ -36,7 +52,7 @@ module.exports = {
       en: "Check or auto-send available stocks from PVBR."
     },
     longDescription: {
-      en: "Fetches and displays current stocks. Retries if API didn’t refresh inside window."
+      en: "Fetches and displays current stocks."
     },
     category: "Utility",
     guide: {
@@ -54,7 +70,7 @@ module.exports = {
         const items = data.items || [];
         const seeds = items.filter(it => it.category.toLowerCase().includes("seed"));
         const gear = items.filter(it => it.category.toLowerCase().includes("gear"));
-        const date = new Date(data.updatedAt || Date.now());
+        const date = convertToPH(data.updatedAt || Date.now());
         const phTime = date.toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
         let body = "🌱 Available Stocks 🌱\n\n";
@@ -121,25 +137,6 @@ module.exports = {
       }
     }
 
-    function isInWindow(apiTime) {
-      const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-      const minute = Math.floor(phNow.getMinutes() / 5) * 5;
-
-      const windowStart = new Date(phNow);
-      windowStart.setMinutes(minute, 0, 0);
-
-      const windowEnd = new Date(windowStart);
-      windowEnd.setMinutes(windowStart.getMinutes() + 5, 0, 0);
-      windowEnd.setSeconds(windowEnd.getSeconds() - 1);
-
-      console.log("PH Now:", phNow.toLocaleTimeString("en-PH"));
-      console.log("API Time:", apiTime.toLocaleTimeString("en-PH"));
-      console.log("Window Start:", windowStart.toLocaleTimeString("en-PH"));
-      console.log("Window End:", windowEnd.toLocaleTimeString("en-PH"));
-
-      return apiTime >= windowStart && apiTime <= windowEnd;
-    }
-
     async function attemptSend(sentRetryFlag) {
       const result = await fetchStocks();
       if (result.updatedAt && isInWindow(result.updatedAt)) {
@@ -173,12 +170,11 @@ module.exports = {
               api.sendMessage(result, threadID);
               clearInterval(retryInterval);
             } else {
-              const nowPH = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+              const nowPH = convertToPH(Date.now());
               const minute = Math.floor(nowPH.getMinutes() / 5) * 5;
               const windowEnd = new Date(nowPH);
               windowEnd.setMinutes(minute + 5, 0, 0);
               windowEnd.setSeconds(windowEnd.getSeconds() - 1);
-
               if (nowPH > windowEnd) {
                 clearInterval(retryInterval);
               }
