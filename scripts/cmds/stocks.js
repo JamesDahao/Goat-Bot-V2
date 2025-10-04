@@ -13,6 +13,7 @@ const emojiMap = {
   cocotank: "🥥",
   carnivorous: "🥩",
   "mr carrot": "🥕",
+  "mango": "🥭"
   tomatrio: "🍅",
   shroombino: "🍄",
   "water bucket": "🪣",
