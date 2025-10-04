@@ -41,7 +41,7 @@ async function fetchStocks() {
   return res.data;
 }
 
-function buildMessage(data) {
+function buildMessage(data, participants) {
   const phNow = toPHTime(Date.now());
   const updatedAtPH = toPHTime(data.updatedAt);
   const nextRestock = new Date(phNow);
@@ -56,6 +56,9 @@ function buildMessage(data) {
   const seeds = data.items.filter(it => it.category.toLowerCase() === "seed");
   const gear = data.items.filter(it => it.category.toLowerCase() === "gear");
 
+  const secretSeeds = ["tomatrio", "mr carrot", "shroombino", "mango"];
+  let foundSecret = false;
+
   if (seeds.length > 0) {
     body += "🌾 Seeds:\n";
     seeds.forEach(it => {
@@ -64,6 +67,8 @@ function buildMessage(data) {
       let matchedKey = Object.keys(emojiMap).find(key => lower.includes(key));
       const emoji = matchedKey ? emojiMap[matchedKey] : "•";
       body += `${emoji} ${cleanName}: ${it.currentStock} in stock\n`;
+
+      if (secretSeeds.some(s => lower.includes(s))) foundSecret = true;
     });
     body += "\n";
   }
@@ -80,9 +85,22 @@ function buildMessage(data) {
     body += "\n";
   }
 
-  console.log("PH Now:", formatTime(phNow));
-  console.log("UpdatedAt PH:", formatTime(updatedAtPH));
-  return { body, updatedAtPH };
+  let mentions = [];
+  if (foundSecret && participants) {
+    let alertMsg = "@all : Secret seed has been detected!";
+    let fromIndex = body.length;
+    body += alertMsg;
+
+    for (const uid of participants) {
+      mentions.push({
+        tag: "@all",
+        id: uid,
+        fromIndex
+      });
+    }
+  }
+
+  return { body, updatedAtPH, mentions };
 }
 
 function isInWindow(updatedAtPH) {
@@ -97,12 +115,12 @@ function isInWindow(updatedAtPH) {
   return updatedAtPH >= windowStart && updatedAtPH <= windowEnd;
 }
 
-async function attemptSend(api, threadID, sentRetryFlag) {
+async function attemptSend(api, threadID, participants, sentRetryFlag) {
   const data = await fetchStocks();
-  const { body, updatedAtPH } = buildMessage(data);
+  const { body, updatedAtPH, mentions } = buildMessage(data, participants);
 
   if (isInWindow(updatedAtPH)) {
-    api.sendMessage(body, threadID);
+    api.sendMessage({ body, mentions }, threadID);
     return true;
   } else {
     if (!sentRetryFlag.flag) {
@@ -113,7 +131,7 @@ async function attemptSend(api, threadID, sentRetryFlag) {
   }
 }
 
-function scheduleNext(api, threadID) {
+function scheduleNext(api, threadID, participants) {
   const now = toPHTime(Date.now());
   const next = new Date(now);
   next.setMinutes(Math.floor(now.getMinutes() / 5) * 5 + 5);
@@ -122,14 +140,14 @@ function scheduleNext(api, threadID) {
 
   JamesDahao[threadID] = setTimeout(async function run() {
     let sentRetryFlag = { flag: false };
-    let sent = await attemptSend(api, threadID, sentRetryFlag);
+    let sent = await attemptSend(api, threadID, participants, sentRetryFlag);
     if (!sent) {
       const retryInterval = setInterval(async () => {
-        let result = await attemptSend(api, threadID, sentRetryFlag);
+        let result = await attemptSend(api, threadID, participants, sentRetryFlag);
         if (result) clearInterval(retryInterval);
       }, 30000);
     }
-    scheduleNext(api, threadID);
+    scheduleNext(api, threadID, participants);
   }, delay);
 }
 
@@ -137,7 +155,7 @@ module.exports = {
   config: {
     name: "stock",
     aliases: [],
-    version: "1.0",
+    version: "1.2",
     author: "James Dahao",
     role: 2,
     category: "utility",
@@ -148,11 +166,12 @@ module.exports = {
 
   onStart: async function ({ api, event, args }) {
     const threadID = event.threadID;
+    const participants = event.participantIDs;
 
     if (args[0] && args[0].toLowerCase() === "on") {
       if (JamesDahao[threadID]) return;
       api.sendMessage("🟩 Auto Stocks update started", threadID);
-      scheduleNext(api, threadID);
+      scheduleNext(api, threadID, participants);
       return;
     }
 
@@ -165,7 +184,7 @@ module.exports = {
     }
 
     const data = await fetchStocks();
-    const { body } = buildMessage(data);
-    api.sendMessage(body, threadID);
+    const { body, mentions } = buildMessage(data, participants);
+    api.sendMessage({ body, mentions }, threadID);
   }
 };
