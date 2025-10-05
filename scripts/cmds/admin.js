@@ -5,34 +5,19 @@ module.exports = {
 	config: {
 		name: "admin",
 		version: "1.6",
-		author: "NTKhang",
+		author: "James Dahao",
 		countDown: 5,
 		role: 2,
 		description: {
-			vi: "Thêm, xóa, sửa quyền admin",
-			en: "Add, remove, edit admin role"
+			en: "Add, remove, or list bot admins"
 		},
 		category: "box chat",
 		guide: {
-			vi: '   {pn} [add | -a] <uid | @tag>: Thêm quyền admin cho người dùng'
-				+ '\n	  {pn} [remove | -r] <uid | @tag>: Xóa quyền admin của người dùng'
-				+ '\n	  {pn} [list | -l]: Liệt kê danh sách admin',
-			en: '   {pn} [add | -a] <uid | @tag>: Add admin role for user'
-				+ '\n	  {pn} [remove | -r] <uid | @tag>: Remove admin role of user'
-				+ '\n	  {pn} [list | -l]: List all admins'
+			en: "   {pn} [add | -a] <uid | @tag>: Add admin role for user\n   {pn} [remove | -r] <uid | @tag>: Remove admin role of user\n   {pn} [list | -l]: List all admins"
 		}
 	},
 
 	langs: {
-		vi: {
-			added: "✅ | Đã thêm quyền admin cho %1 người dùng:\n%2",
-			alreadyAdmin: "\n⚠️ | %1 người dùng đã có quyền admin từ trước rồi:\n%2",
-			missingIdAdd: "⚠️ | Vui lòng nhập ID hoặc tag người dùng muốn thêm quyền admin",
-			removed: "✅ | Đã xóa quyền admin của %1 người dùng:\n%2",
-			notAdmin: "⚠️ | %1 người dùng không có quyền admin:\n%2",
-			missingIdRemove: "⚠️ | Vui lòng nhập ID hoặc tag người dùng muốn xóa quyền admin",
-			listAdmin: "👑 | Danh sách admin:\n%1"
-		},
 		en: {
 			added: "✅ | Added admin role for %1 users:\n%2",
 			alreadyAdmin: "\n⚠️ | %1 users already have admin role:\n%2",
@@ -64,7 +49,6 @@ module.exports = {
 						else
 							notAdminIds.push(uid);
 					}
-
 					config.adminBot.push(...notAdminIds);
 					const getNames = await Promise.all(uids.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
 					writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
@@ -72,16 +56,14 @@ module.exports = {
 						(notAdminIds.length > 0 ? getLang("added", notAdminIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
 						+ (adminIds.length > 0 ? getLang("alreadyAdmin", adminIds.length, adminIds.map(uid => `• ${uid}`).join("\n")) : "")
 					);
-				}
-				else
-					return message.reply(getLang("missingIdAdd"));
+				} else return message.reply(getLang("missingIdAdd"));
 			}
 			case "remove":
 			case "-r": {
 				if (args[1]) {
 					let uids = [];
 					if (Object.keys(event.mentions).length > 0)
-						uids = Object.keys(event.mentions)[0];
+						uids = Object.keys(event.mentions);
 					else
 						uids = args.filter(arg => !isNaN(arg));
 					const notAdminIds = [];
@@ -100,9 +82,7 @@ module.exports = {
 						(adminIds.length > 0 ? getLang("removed", adminIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
 						+ (notAdminIds.length > 0 ? getLang("notAdmin", notAdminIds.length, notAdminIds.map(uid => `• ${uid}`).join("\n")) : "")
 					);
-				}
-				else
-					return message.reply(getLang("missingIdRemove"));
+				} else return message.reply(getLang("missingIdRemove"));
 			}
 			case "list":
 			case "-l": {
