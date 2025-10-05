@@ -2,32 +2,18 @@ module.exports = {
 	config: {
 		name: "onlyadminbox",
 		aliases: ["onlyadbox", "adboxonly", "adminboxonly"],
-		version: "1.3",
-		author: "NTKhang",
+		version: "1.4",
+		author: "James Dahao",
 		countDown: 5,
 		role: 1,
-		description: {
-			vi: "bật/tắt chế độ chỉ quản trị của viên nhóm mới có thể sử dụng bot",
-			en: "turn on/off only admin box can use bot"
-		},
+		description: "Turn on/off only admin box can use bot",
 		category: "box chat",
-		guide: {
-			vi: "   {pn} [on | off]: bật/tắt chế độ chỉ quản trị viên nhóm mới có thể sử dụng bot"
-				+ "\n   {pn} noti [on | off]: bật/tắt thông báo khi người dùng không phải là quản trị viên nhóm sử dụng bot",
-			en: "   {pn} [on | off]: turn on/off the mode only admin of group can use bot"
-				+ "\n   {pn} noti [on | off]: turn on/off the notification when user is not admin of group use bot"
-		}
+		guide: "{pn} [on | off]: turn on/off the mode only admin of group can use bot\n{pn} noti [on | off]: turn on/off the notification when user is not admin of group use bot"
 	},
 
 	langs: {
-		vi: {
-			turnedOn: "Đã bật chế độ chỉ quản trị viên nhóm mới có thể sử dụng bot",
-			turnedOff: "Đã tắt chế độ chỉ quản trị viên nhóm mới có thể sử dụng bot",
-			turnedOnNoti: "Đã bật thông báo khi người dùng không phải là quản trị viên nhóm sử dụng bot",
-			turnedOffNoti: "Đã tắt thông báo khi người dùng không phải là quản trị viên nhóm sử dụng bot",
-			syntaxError: "Sai cú pháp, chỉ có thể dùng {pn} on hoặc {pn} off"
-		},
 		en: {
+			noPermission: "❌ Only group admins or bot admins can use this command.",
 			turnedOn: "Turned on the mode only admin of group can use bot",
 			turnedOff: "Turned off the mode only admin of group can use bot",
 			turnedOnNoti: "Turned on the notification when user is not admin of group use bot",
@@ -36,7 +22,12 @@ module.exports = {
 		}
 	},
 
-	onStart: async function ({ args, message, event, threadsData, getLang }) {
+	onStart: async function ({ args, message, event, threadsData, getLang, api }) {
+		const { adminBot } = global.GoatBot.config;
+		const adminIDs = await threadsData.get(event.threadID, "adminIDs");
+		if (!adminIDs.includes(event.senderID) && !adminBot.includes(event.senderID))
+			return message.reply(getLang("noPermission"));
+
 		let isSetNoti = false;
 		let value;
 		let keySetData = "data.onlyAdminBox";
