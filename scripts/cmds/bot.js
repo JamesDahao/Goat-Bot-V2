@@ -1,77 +1,58 @@
 module.exports = {
+	config: {
+		name: "bot",
+		version: "1.0",
+		author: "James Dahao",
+		countDown: 5,
+		role: 0,
+		shortDescription: "Bot replies with random messages",
+		longDescription: "Bot responds with a random message when mentioned or called",
+		category: "fun",
+		guide: {
+			en: "{pn} text"
+		}
+	},
 
-    config: {
+	onStart: async () => {},
 
-        name: "bot",
+	onChat: async function ({ message, event, api }) {
+		const quotes = [
+			"Oh! ano nanaman trip mo?",
+			"Naneto tawag ng tawag, di moko utusan!!!",
+			"Yung Admin kausapin mo wala ako sa mood",
+			"don't disturb 🤖 I'm busy right now.",
+			"Anong maitutulong ko sayo Supot!",
+			"I'm busy with my owner right now.",
+			"Call my owner instead.",
+			"The creator of this bot is James Dahao 💻",
+			"Hey! Why are you calling me so much? 😅",
+			"Ask later, I'm not in the mood 🙂",
+			"Oo na, sige na!",
+			"Why are you calling me so much 🙈",
+			"Ayos muna mukha!"
+		];
 
-        version: "1.0",
+		const Prefixes = ["bot", "Bot"];
+		if (!event.body) return;
 
-        author: "Aminulsordar",
+		const prefix = Prefixes.find(p => event.body.toLowerCase().startsWith(p.toLowerCase()));
+		if (!prefix) return;
 
-        countDown: 5,
+		const uid = event.senderID;
+		let name = "User";
 
-        role: 0,
+		try {
+			const userInfo = await api.getUserInfo(uid);
+			name = userInfo[uid]?.name || "User";
+		} catch (error) {
+			console.error("Error fetching user info:", error);
+		}
 
-        shortDescription: "bot",
+		const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-        longDescription: "bot",
-
-        category: "Fun",
-
-        guide: {
-
-            en: "{pn} text"
-
-        }
-
-    },
-
-    onStart: async () => {},
-
-    onChat: async function({ message, event, api }) {
-
-        const quotes = ["I love you 💝", "ভালোবাসি তোমাকে 🤖", "Hi, I'm massanger Bot i can help you.?🤖","Use callad to contact admin!", "Hi, Don't disturb 🤖 🚘Now I'm going to Feni,Bangladesh..bye", "Hi, 🤖 i can help you~~~~","আমি এখন আমিনুল বসের সাথে বিজি আছি","আমাকে আমাকে না ডেকে আমার বসকে ডাকো এই নেও LINK :- https://www.facebook.com/100071880593545","Hmmm sona 🖤 meye hoile kule aso ar sele hoile kule new 🫂😘","Yah This Bot creator : PRINCE RID((A.R))     link => https://www.facebook.com/100071880593545","হা বলো, শুনছি আমি 🤸‍♂️🫂","Ato daktasen kn bujhlam na 😡", "jan bal falaba,🙂","ask amr mon vlo nei dakben na🙂", "Hmm jan ummah😘😘","jang hanga korba 🙂🖤","iss ato dako keno lojja lage to 🫦🙈","suna tomare amar valo lage,🙈😽" ];
-
-
-        const Prefixes = ['bot', 'Bot'];
-
-
-        if (!event.body) return;
-
-
-        const prefix = Prefixes.find(p => event.body.toLowerCase().startsWith(p.toLowerCase()));
-
-        if (!prefix) return;
-
-
-        const uid = event.senderID;
-
-
-        let name = "User";
-
-        try {
-
-            const userInfo = await api.getUserInfo(uid);
-
-            name = userInfo[uid]?.name || "User";
-
-        } catch (error) {
-
-            console.error("Error fetching user info:", error);
-
-        }
-
-
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-
-        return message.reply({
-
-            body: `🥀 ${name} 🥀\n\n${randomQuote}`,
-
-            mentions: [{ id: uid, tag: name }]
-
-        });
-
-    }
-
+		return message.reply({
+			body: `🥀 ${name} 🥀\n\n${randomQuote}`,
+			mentions: [{ id: uid, tag: name }]
+		});
+	}
 };
