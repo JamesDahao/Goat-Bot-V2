@@ -50,7 +50,7 @@ function buildMessage(data, participants) {
   const updatedAtPH = toPHTime(data.updatedAt);
   const nextRestock = new Date(phNow);
   nextRestock.setMinutes(Math.floor(phNow.getMinutes() / 5) * 5 + 5);
-  nextRestock.setSeconds(30);
+  nextRestock.setSeconds(80);
 
   let body = "🌱 Available Stocks 🌱\n\n";
   body += `🗓️ Date: ${formatDate(phNow)}\n`;
