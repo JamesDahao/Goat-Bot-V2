@@ -21,6 +21,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt update
+          sudo apt install gh -y
+
       - name: Prevent overlap
         run: |
           echo "Checking for running workflows..."
@@ -30,7 +37,7 @@ jobs:
             exit 0
           fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: npm install
@@ -42,9 +49,8 @@ jobs:
         run: sleep 10
 
       - name: Self-dispatch to restart
-        uses: peter-evans/workflow-dispatch@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          workflow: "Run.yml"
-          ref: ${{ github.ref }}
+        run: |
+          echo "Restarting workflow..."
+          gh workflow run Run.yml --ref ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
