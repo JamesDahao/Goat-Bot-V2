@@ -3,37 +3,35 @@ const path = require("path");
 const { getPrefix } = global.utils;
 const { commands, aliases } = global.GoatBot;
 
-const doNotDelete = "[ 🐐 | Goat Bot V2 ]";
+const doNotDelete = "[ 🤖 | James Bot ]";
 
 module.exports = {
 	config: {
 		name: "help",
 		version: "2.6",
-		author: "Aminul Sardar (Decorated from NTKhang)",
+		author: "James Dahao",
 		countDown: 5,
-		role: 0,
+		role: 1,
 		description: {
-			en: "View all commands and usage",
-			vi: "Xem tất cả lệnh và cách dùng"
+			en: "View all commands and usage"
 		},
 		category: "info",
 		guide: {
-			en: "{pn} [page]\n{pn} <command name>",
-			vi: "{pn} [trang]\n{pn} <tên lệnh>"
+			en: "{pn} [page]\n{pn} <command name>"
 		}
 	},
 
 	langs: {
 		en: {
+			noPermission: "⚠️ Only group admins and bot admins can use this command.",
 			pageNotFound: "⚠️ Page %1 does not exist.",
 			commandNotFound: "⚠️ Command \"%1\" not found.",
 			helpList:
 				"╔═════•| 🤖 |•═════╗\n" +
-				" Plant vs Brainrot Bot\n" +
+				" James Bot\n" +
 				"╚═════•| 🤖 |•═════╝\n\n" +
-				"📜 𝐏𝐀𝐆𝐄 %1/%2 📜\n\n" +
+				"📜 PAGE %1/%2 📜\n\n" +
 				"%3",
-
 			commandInfo:
 				"╔═════•| 📖 |•═════╗\n" +
 				" COMMAND INFORMATION\n" +
@@ -43,50 +41,21 @@ module.exports = {
 				"🔹 Role: %3\n" +
 				"🔹 Version: %4\n" +
 				"🔹 Author: %5\n\n" +
-				"💡 Usage:\n%6\n\n" +
-				"━❮🖤❯━━━❪🕊️❫━━━❮🩷❯━"
-		},
-
-		vi: {
-			pageNotFound: "⚠️ Trang %1 không tồn tại.",
-			commandNotFound: "⚠️ Lệnh \"%1\" không tồn tại.",
-			helpList:
-				"╔═════•| 💜 |•═════╗\n" +
-				" GOAT-BOT 𝐏𝐑𝐎𝐉𝐄𝐂𝐓\n" +
-				"╚═════•| 💜 |•═════╝\n\n" +
-				"📜 𝐓𝐫𝐚𝐧𝐠 %1/%2 📜\n\n" +
-				" ━❮🖤❯━━━❪🕊️❫━━━❮🩷❯━\n" +
-				"%3" +
-				" ━❮🖤❯━━━❪🕊️❫━━━❮🩷❯━\n\n" +
-				"📌 Cách tạo bot free:\n👉 Facebook.com/100071880593545\n\n" +
-				"🅞𝐖𝐍𝐄𝐑 🅑𝐨𝐭 🙊😝\n👉 m.me/100071880593545\n\n" +
-				"━❮🖤❯━━━❪🕊️❫━━━❮🩷❯━",
-
-			commandInfo:
-				"╔═════•| 📖 |•═════╗\n" +
-				"   𝐓𝐇𝐎̂𝐍𝐆 𝐓𝐈𝐍 𝐋𝐄̣̂𝐍𝐇\n" +
-				"╚═════•| 📖 |•═════╝\n\n" +
-				"🔹 Tên: %1\n" +
-				"🔹 Mô tả: %2\n" +
-				"🔹 Quyền: %3\n" +
-				"🔹 Phiên bản: %4\n" +
-				"🔹 Tác giả: %5\n\n" +
-				"💡 Cách dùng:\n%6\n\n" +
-				"━❮🖤❯━━━❪🕊️❫━━━❮🩷❯━"
+				"💡 Usage:\n%6\n\n"
 		}
 	},
 
-	onStart: async function ({ message, args, event, threadsData, getLang, role }) {
+	onStart: async function ({ message, args, event, threadsData, getLang, role, isAdmin, isBotAdmin }) {
+		if (!isAdmin && !isBotAdmin)
+			return message.reply(getLang("noPermission"));
+
 		const { threadID } = event;
 		const threadData = await threadsData.get(threadID);
 		const prefix = getPrefix(threadID);
-
-		// Check if args[0] is a page number
 		const pageNum = parseInt(args[0]);
 		const isPage = !isNaN(pageNum);
 
 		if (!args[0] || isPage) {
-			// Show command list page
 			let arrayInfo = [];
 			for (const [name, value] of commands) {
 				if (value.config.role > 1 && role < value.config.role) continue;
@@ -95,7 +64,7 @@ module.exports = {
 			arrayInfo.sort();
 
 			const page = isPage ? pageNum : 1;
-			const numberOfOnePage = 20; // 20 commands per page
+			const numberOfOnePage = 20;
 			const totalPage = Math.ceil(arrayInfo.length / numberOfOnePage);
 
 			if (page < 1 || page > totalPage)
@@ -113,7 +82,6 @@ module.exports = {
 			return message.reply(getLang("helpList", page, totalPage, textList));
 		}
 
-		// Else → show command details
 		const cmdName = args[0].toLowerCase();
 		let command = commands.get(cmdName) || commands.get(aliases.get(cmdName));
 		if (!command)
@@ -121,7 +89,6 @@ module.exports = {
 
 		const cfg = command.config;
 		const usage = (cfg.guide?.en || cfg.guide || "").replace(/\{pn\}/g, prefix + cfg.name);
-
 		const roleText =
 			cfg.role == 0 ? "0 (All users)" :
 			cfg.role == 1 ? "1 (Group admin)" :
