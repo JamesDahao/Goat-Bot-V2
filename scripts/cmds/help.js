@@ -45,12 +45,15 @@ module.exports = {
 		}
 	},
 
-	onStart: async function ({ message, args, event, threadsData, getLang, role, isAdmin, isBotAdmin }) {
-		if (!isAdmin && !isBotAdmin)
+	onStart: async function ({ message, args, event, threadsData, getLang, role, isBotAdmin }) {
+		const { threadID, senderID } = event;
+		const threadData = await threadsData.get(threadID);
+		const groupAdmins = threadData?.adminIDs || [];
+		const isGroupAdmin = groupAdmins.includes(senderID);
+
+		if (!isGroupAdmin && !isBotAdmin)
 			return message.reply(getLang("noPermission"));
 
-		const { threadID } = event;
-		const threadData = await threadsData.get(threadID);
 		const prefix = getPrefix(threadID);
 		const pageNum = parseInt(args[0]);
 		const isPage = !isNaN(pageNum);
