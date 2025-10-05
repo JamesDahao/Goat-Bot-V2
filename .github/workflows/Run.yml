@@ -1,8 +1,6 @@
 name: Node.js CI
 
 on:
-  schedule:
-    - cron: "0 * * * *"
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -18,12 +16,23 @@ jobs:
         node-version: [20.x]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - run: npm install
-    - run: npm start
+      - run: npm install
+      - run: npm start
+
+      - name: Wait before next run
+        run: sleep $((5*3600 + 59*60))  # Wait exactly 5h59m
+
+      - name: Schedule Next Run
+        uses: peter-evans/workflow-dispatch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          workflow: Run.yml
+          ref: main
