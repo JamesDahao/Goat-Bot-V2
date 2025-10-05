@@ -1,9 +1,6 @@
 name: Node.js CI
 
 on:
-  schedule:
-    - cron: "0 */5 * * *"
-  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
@@ -27,3 +24,4 @@ jobs:
 
     - run: npm install
     - run: npm start
+
