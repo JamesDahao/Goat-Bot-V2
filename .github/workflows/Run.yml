@@ -30,7 +30,7 @@ jobs:
         run: sleep $((5*3600 + 59*60))  # Wait exactly 5h59m
 
       - name: Schedule Next Run
-        uses: peter-evans/workflow-dispatch@v1
+        uses: peter-evans/workflow-dispatch@v1.2.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
