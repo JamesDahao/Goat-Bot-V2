@@ -4,23 +4,19 @@ module.exports = {
 	config: {
 		name: "backupdata",
 		version: "1.3",
-		author: "NTKhang",
+		author: "James Dahao",
 		countDown: 5,
 		role: 2,
 		description: {
-			vi: "Sao lưu dữ liệu của bot (threads, users, dashboard, globalData)",
 			en: "Backup data of bot (threads, users, dashboard, globalData)"
 		},
 		category: "owner",
 		guide: {
-			en: "   {pn}"
+			en: "{pn}"
 		}
 	},
 
 	langs: {
-		vi: {
-			backedUp: "Đã sao lưu dữ liệu của bot vào thư mục scripts/cmds/tmp"
-		},
 		en: {
 			backedUp: "Bot data has been backed up to the scripts/cmds/tmp folder"
 		}
