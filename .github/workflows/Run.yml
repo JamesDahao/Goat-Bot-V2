@@ -1,12 +1,8 @@
 name: Node.js CI
 
 on:
-  schedule:
-    - cron: "59 */6 * * *" # Every 6 hours at minute 59 (~5h59m apart)
   workflow_dispatch:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -27,13 +23,28 @@ jobs:
 
       - name: Prevent overlap
         run: |
+          echo "Checking for running workflows..."
           RUNNING=$(gh run list --workflow="Run.yml" --status=in_progress --limit 1 --json databaseId | jq '.[0]')
           if [ "$RUNNING" != "null" ]; then
-            echo "Another run is in progress. Exiting."
+            echo "Another run is already in progress. Exiting."
             exit 0
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: npm install
-      - run: npm start
+      - name: Install dependencies
+        run: npm install
+
+      - name: Start bot
+        run: npm start
+
+      - name: Wait before restart
+        run: sleep 10
+
+      - name: Self-dispatch to restart
+        uses: peter-evans/workflow-dispatch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          workflow: "Run.yml"
+          ref: ${{ github.ref }}
