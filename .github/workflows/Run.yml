@@ -1,6 +1,8 @@
 name: Node.js CI
 
 on:
+  schedule:
+    - cron: "59 */6 * * *" # Every 6 hours at minute 59 (~5h59m apart)
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -25,14 +27,3 @@ jobs:
 
       - run: npm install
       - run: npm start
-
-      - name: Wait before next run
-        run: sleep $((5*3600 + 59*60))
-
-      - name: Dispatch next workflow run
-        run: |
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type": "self-dispatch"}'
