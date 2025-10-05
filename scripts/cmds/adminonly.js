@@ -7,34 +7,24 @@ module.exports = {
 		name: "adminonly",
 		aliases: ["adonly", "onlyad", "onlyadmin"],
 		version: "1.5",
-		author: "NTKhang",
+		author: "James Dahao",
 		countDown: 5,
 		role: 2,
 		description: {
-			vi: "bật/tắt chế độ chỉ admin mới có thể sử dụng bot",
-			en: "turn on/off only admin can use bot"
+			en: "Turn on/off only admin can use bot"
 		},
 		category: "owner",
 		guide: {
-			vi: "   {pn} [on | off]: bật/tắt chế độ chỉ admin mới có thể sử dụng bot"
-				+ "\n   {pn} noti [on | off]: bật/tắt thông báo khi người dùng không phải là admin sử dụng bot",
-			en: "   {pn} [on | off]: turn on/off the mode only admin can use bot"
-				+ "\n   {pn} noti [on | off]: turn on/off the notification when user is not admin use bot"
+			en: "   {pn} [on | off]: Turn on/off only admin can use bot\n   {pn} noti [on | off]: Turn on/off notification when non-admin user uses bot"
 		}
 	},
 
 	langs: {
-		vi: {
-			turnedOn: "Đã bật chế độ chỉ admin mới có thể sử dụng bot",
-			turnedOff: "Đã tắt chế độ chỉ admin mới có thể sử dụng bot",
-			turnedOnNoti: "Đã bật thông báo khi người dùng không phải là admin sử dụng bot",
-			turnedOffNoti: "Đã tắt thông báo khi người dùng không phải là admin sử dụng bot"
-		},
 		en: {
-			turnedOn: "Turned on the mode only admin can use bot",
-			turnedOff: "Turned off the mode only admin can use bot",
-			turnedOnNoti: "Turned on the notification when user is not admin use bot",
-			turnedOffNoti: "Turned off the notification when user is not admin use bot"
+			turnedOn: "Turned on the mode: only admins can use the bot",
+			turnedOff: "Turned off the mode: everyone can use the bot",
+			turnedOnNoti: "Turned on notification when non-admin user tries to use bot",
+			turnedOffNoti: "Turned off notification when non-admin user tries to use bot"
 		}
 	},
 
@@ -58,8 +48,7 @@ module.exports = {
 		if (isSetNoti) {
 			config.hideNotiMessage.adminOnly = !value;
 			message.reply(getLang(value ? "turnedOnNoti" : "turnedOffNoti"));
-		}
-		else {
+		} else {
 			config.adminOnly.enable = value;
 			message.reply(getLang(value ? "turnedOn" : "turnedOff"));
 		}
