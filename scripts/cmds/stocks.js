@@ -5,6 +5,8 @@ const autoStartThreads = [
   "1606898753628191"
 ];
 
+const lastWindowSent = {}; // Anti-spam tracker
+
 const emojiMap = {
   cactus: "🌵",
   strawberry: "🍓",
@@ -50,7 +52,7 @@ function buildMessage(data, participants) {
   const updatedAtPH = toPHTime(data.updatedAt);
   const nextRestock = new Date(phNow);
   nextRestock.setMinutes(Math.floor(phNow.getMinutes() / 5) * 5 + 5);
-  nextRestock.setSeconds(80);
+  nextRestock.setSeconds(30);
 
   let body = "🌱 Available Stocks 🌱\n\n";
   body += `🗓️ Date: ${formatDate(phNow)}\n`;
@@ -122,12 +124,22 @@ async function attemptSend(api, threadID, participants, sentRetryFlag) {
   const data = await fetchStocks();
   const { body, updatedAtPH, mentions } = buildMessage(data, participants);
 
+  const now = toPHTime(Date.now());
+  const minute = Math.floor(now.getMinutes() / 5) * 5;
+  const windowKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${minute}`;
+
+  // Anti-spam: skip if already sent this window
+  if (lastWindowSent[threadID] === windowKey) {
+    return false;
+  }
+
   if (isInWindow(updatedAtPH)) {
     api.sendMessage({ body, mentions }, threadID);
+    lastWindowSent[threadID] = windowKey;
     return true;
   } else {
     if (!sentRetryFlag.flag) {
-      api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 30s until refreshed", threadID);
+      api.sendMessage("⚠️ API delay: stocks didn't refresh\nRetrying every 5s until refreshed", threadID);
       sentRetryFlag.flag = true;
     }
     return false;
@@ -138,18 +150,20 @@ function scheduleNext(api, threadID, participants) {
   const now = toPHTime(Date.now());
   const next = new Date(now);
   next.setMinutes(Math.floor(now.getMinutes() / 5) * 5 + 5);
-  next.setSeconds(30);
+  next.setSeconds(80); // 5 mins + 80 sec
   const delay = next.getTime() - now.getTime();
 
   JamesDahao[threadID] = setTimeout(async function run() {
     let sentRetryFlag = { flag: false };
     let sent = await attemptSend(api, threadID, participants, sentRetryFlag);
+
     if (!sent) {
       const retryInterval = setInterval(async () => {
         let result = await attemptSend(api, threadID, participants, sentRetryFlag);
         if (result) clearInterval(retryInterval);
-      }, 30000);
+      }, 5000); // retry every 5 sec
     }
+
     scheduleNext(api, threadID, participants);
   }, delay);
 }
