@@ -27,12 +27,12 @@ jobs:
       - run: npm start
 
       - name: Wait before next run
-        run: sleep $((5*3600 + 59*60))  # Wait exactly 5h59m
+        run: sleep $((5*3600 + 59*60))
 
-      - name: Schedule Next Run
-        uses: peter-evans/workflow-dispatch@v1.2.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          workflow: Run.yml
-          ref: main
+      - name: Dispatch next workflow run
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type": "self-dispatch"}'
