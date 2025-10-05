@@ -1,6 +1,10 @@
 const axios = require("axios");
 
 const JamesDahao = {};
+const autoStartThreads = [
+  "1606898753628191"
+];
+
 const emojiMap = {
   cactus: "🌵",
   strawberry: "🍓",
@@ -13,7 +17,7 @@ const emojiMap = {
   cocotank: "🥥",
   carnivorous: "🥩",
   "mr carrot": "🥕",
-  "mango": "🥭",
+  mango: "🥭",
   tomatrio: "🍅",
   shroombino: "🍄",
   "water bucket": "🪣",
@@ -67,7 +71,6 @@ function buildMessage(data, participants) {
       let matchedKey = Object.keys(emojiMap).find(key => lower.includes(key));
       const emoji = matchedKey ? emojiMap[matchedKey] : "•";
       body += `${emoji} ${cleanName}: ${it.currentStock} in stock\n`;
-
       if (secretSeeds.some(s => lower.includes(s))) foundSecret = true;
     });
     body += "\n";
@@ -87,13 +90,13 @@ function buildMessage(data, participants) {
 
   let mentions = [];
   if (foundSecret && participants) {
-    let alertMsg = "@all : Secret seed has been detected!";
+    let alertMsg = "@everyone : Secret seed has been detected!";
     let fromIndex = body.length;
     body += alertMsg;
 
     for (const uid of participants) {
       mentions.push({
-        tag: "@all",
+        tag: "@everyone",
         id: uid,
         fromIndex
       });
@@ -155,13 +158,13 @@ module.exports = {
   config: {
     name: "stock",
     aliases: [],
-    version: "1.2",
+    version: "1.4",
     author: "James Dahao",
     role: 2,
     category: "utility",
     shortDescription: { en: "Check or auto-send available stocks" },
-    longDescription: { en: "Fetches and displays current stocks from PVBR." },
-    guide: { en: "{p}stock → Show stocks\n{p}stock on → Auto-send every restock window\n{p}stock off → Stop auto-send" }
+    longDescription: { en: "Fetches and displays current stocks from PVBR automatically." },
+    guide: { en: "{p}stock → Show stocks\n{p}stock on/off → Manually control auto updates" }
   },
 
   onStart: async function ({ api, event, args }) {
@@ -186,5 +189,18 @@ module.exports = {
     const data = await fetchStocks();
     const { body, mentions } = buildMessage(data, participants);
     api.sendMessage({ body, mentions }, threadID);
+  },
+
+  onLoad: async function ({ api }) {
+    for (const threadID of autoStartThreads) {
+      try {
+        const info = await api.getThreadInfo(threadID);
+        const participants = info.participantIDs;
+        scheduleNext(api, threadID, participants);
+        api.sendMessage("🟢 Auto Stocks update initialized (bot startup)", threadID);
+      } catch (err) {
+        console.error(`Failed to start auto-stock for ${threadID}:`, err.message);
+      }
+    }
   }
 };
