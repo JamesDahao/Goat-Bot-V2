@@ -160,20 +160,19 @@ function startAuto(api, threadID, rarities) {
 module.exports = {
   config: {
     name: "stock",
-    version: "3.3",
+    version: "2.0",
     author: "James Dahao",
     role: 0,
-    shortDescription: "Track PvB stocks by rarity",
-    longDescription:
-      "🪴 Commands:\n" +
+    Description: "Plant vs Brainrot Stock Tracker",
+    category: "utility",
+    guide: "🪴 Commands:\n" +
       "• /stock → One-time show of all rarities\n" +
       "• /stock best → Auto mode (Mythic, Godly, Secret)\n" +
       "• /stock all → Auto mode (All rarities)\n" +
       "• /stock <rarity> → One-time show of that rarity\n" +
       "• /stock off → Stop any running auto mode\n\n" +
       "🔁 Auto updates every 5 minutes\n" +
-      "🔔 Secret seeds mention @everyone automatically",
-    category: "utility"
+      "🔔 Secret seeds mention @everyone automatically"
   },
 
   onStart: async function ({ api, event, args }) {
