@@ -157,7 +157,7 @@ module.exports = {
     author: "James Dahao",
     role: 0,
     shortDescription: "Track PvB stocks by rarity",
-    longDescription:
+    description:
       "🪴 Commands:\n" +
       "• /stock → One-time show of all rarities\n" +
       "• /stock best → Auto mode (Mythic, Godly, Secret)\n" +
@@ -197,8 +197,9 @@ module.exports = {
     const body = hasSecret ? `@everyone\n${message}` : message;
     api.sendMessage(body, threadID);
 
-    // ✅ Auto-start /stock best for thread 1606898753628191
+    // ✅ Auto-start /stock best for thread 1606898753628191 with startup message
     if (!activeThreads["1606898753628191"]) {
+      api.sendMessage("🤖 Bot Startup: stock best running", "1606898753628191");
       startAuto(api, "1606898753628191", ["mythic", "godly", "secret"]);
     }
   }
