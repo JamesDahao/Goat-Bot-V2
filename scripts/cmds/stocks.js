@@ -1,8 +1,18 @@
 const axios = require("axios");
 
-const JamesDahao = {};
-const autoStartThreads = ["1606898753628191"];
-const lastWindowSent = {};
+const activeThreads = {};
+const lastUpdated = {};
+
+const rarityOrder = ["rare", "epic", "legendary", "mythic", "godly", "secret"];
+
+const raritySeeds = {
+  rare: ["cactus", "strawberry"],
+  epic: ["pumpkin", "sunflower"],
+  legendary: ["dragon fruit", "egg plant"],
+  mythic: ["watermelon", "grape"],
+  godly: ["cocotank", "carnivorous"],
+  secret: ["mr carrot", "tomatrio", "shroombino", "mango"]
+};
 
 const emojiMap = {
   cactus: "🌵",
@@ -10,15 +20,15 @@ const emojiMap = {
   pumpkin: "🎃",
   sunflower: "🌻",
   "dragon fruit": "🐉",
-  eggplant: "🍆",
+  "egg plant": "🍆",
   watermelon: "🍉",
   grape: "🍇",
   cocotank: "🥥",
-  carnivorous: "🥩",
+  carnivorous: "🪴",
   "mr carrot": "🥕",
-  mango: "🥭",
   tomatrio: "🍅",
   shroombino: "🍄",
+  mango: "🥭"
 };
 
 function toPHTime(ms) {
@@ -26,12 +36,11 @@ function toPHTime(ms) {
   return new Date(d.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 }
 
-function formatTime(date) {
-  return date.toLocaleTimeString("en-PH", { hour12: false });
-}
-
-function formatDate(date) {
-  return date.toLocaleDateString("en-PH");
+function formatDateTime(date) {
+  const d = toPHTime(date);
+  const dateStr = d.toLocaleDateString("en-PH");
+  const timeStr = d.toLocaleTimeString("en-PH", { hour12: false });
+  return { dateStr, timeStr };
 }
 
 async function fetchStocks() {
@@ -39,137 +48,106 @@ async function fetchStocks() {
   return res.data;
 }
 
-function buildMessage(data, participants, mode = "best") {
+function buildMessage(stockData, rarities) {
   const phNow = toPHTime(Date.now());
-  const updatedAtPH = toPHTime(data.updatedAt);
-  const nextRestock = new Date(phNow);
-  nextRestock.setMinutes(Math.floor(phNow.getMinutes() / 5) * 5 + 5, 0, 0);
+  const { dateStr, timeStr } = formatDateTime(phNow);
+  const next = new Date(phNow.getTime() + 5 * 60000);
+  const { timeStr: nextStr } = formatDateTime(next);
 
-  let body = "🌱 Available Stocks 🌱\n\n";
-  body += `🗓️ Date: ${formatDate(phNow)}\n`;
-  body += `⏳ Now: ${formatTime(updatedAtPH)}\n`;
-  body += `⌛ Next: ${formatTime(nextRestock)}\n\n`;
+  let lines = [
+    `🌱 Available Stocks 🌱`,
+    ``,
+    `🗓️ Date: ${dateStr}`,
+    `⏳ Now: ${timeStr}`,
+    `⌛ Next: ${nextStr}`,
+    ``
+  ];
 
-  const seeds = data.items.filter((it) => it.category.toLowerCase() === "seed");
+  const seeds = stockData.items.filter(it => it.category.toLowerCase() === "seed");
+  let hasSecret = false;
 
-  const rarityMap = {
-    Rare: ["cactus", "strawberry"],
-    Epic: ["pumpkin", "sunflower"],
-    Legendary: ["dragon fruit", "eggplant"],
-    Mythic: ["watermelon", "grape"],
-    Godly: ["cocotank", "carnivorous"],
-    Secret: ["mr carrot", "tomatrio", "shroombino", "mango"],
-  };
-
-  let filteredSeeds = [];
-  if (mode === "best") {
-    filteredSeeds = seeds.filter((it) =>
-      [...rarityMap.Mythic, ...rarityMap.Godly, ...rarityMap.Secret].some((s) =>
-        it.name.toLowerCase().includes(s)
-      )
+  for (const rarity of rarities) {
+    const group = seeds.filter(it =>
+      raritySeeds[rarity].some(s => it.name.toLowerCase().includes(s))
     );
-  } else if (mode === "all") filteredSeeds = seeds;
-  else filteredSeeds = seeds;
 
-  const rarityGroups = {
-    Rare: [],
-    Epic: [],
-    Legendary: [],
-    Mythic: [],
-    Godly: [],
-    Secret: [],
-  };
-
-  filteredSeeds.forEach((it) => {
-    let cleanName = it.name
-      .replace(/<:[^>]+>/g, "")
-      .replace(/ Seed$/i, "")
-      .replace(/^"|"$/g, "")
-      .trim();
-    const lower = cleanName.toLowerCase();
-    const emoji = Object.keys(emojiMap).find((key) => lower.includes(key))
-      ? emojiMap[Object.keys(emojiMap).find((key) => lower.includes(key))]
-      : "•";
-
-    for (const [rarity, list] of Object.entries(rarityMap)) {
-      if (list.some((s) => lower.includes(s))) {
-        rarityGroups[rarity].push(`${emoji} ${cleanName}`);
-        break;
+    if (group.length > 0) {
+      lines.push(`${rarity.charAt(0).toUpperCase() + rarity.slice(1)}:`);
+      for (const seed of group) {
+        const lower = seed.name.toLowerCase();
+        const emoji =
+          Object.keys(emojiMap).find(key => lower.includes(key)) ?
+          emojiMap[Object.keys(emojiMap).find(key => lower.includes(key))] :
+          "🌱";
+        lines.push(`${emoji} ${seed.name}`);
       }
+      lines.push("");
     }
-  });
 
-  let foundSecret = rarityGroups.Secret.length > 0;
-
-  for (const [rarity, items] of Object.entries(rarityGroups)) {
-    if (items.length > 0) {
-      body += `${rarity}:\n${items.join("\n")}\n\n`;
-    }
+    if (rarity === "secret" && group.length > 0) hasSecret = true;
   }
 
-  let mentions = [];
-  if (foundSecret && participants) {
-    const alertMsg = "@everyone : Secret seed has been detected!";
-    const fromIndex = body.length;
-    body += alertMsg;
-    for (const uid of participants) {
-      mentions.push({ tag: "@everyone", id: uid, fromIndex });
-    }
-  }
-
-  if (
-    !Object.values(rarityGroups).some((arr) => arr.length > 0)
-  )
-    return { body: null, updatedAtPH, mentions: [] };
-
-  return { body, updatedAtPH, mentions };
+  return { message: lines.join("\n"), hasSecret };
 }
 
-function isInWindow(updatedAtPH) {
+function inCurrentWindow(updatedAtPH) {
   const now = toPHTime(Date.now());
   const minute = Math.floor(now.getMinutes() / 5) * 5;
   const windowStart = new Date(now);
   windowStart.setMinutes(minute, 0, 0);
-  const windowEnd = new Date(windowStart);
-  windowEnd.setMinutes(windowStart.getMinutes() + 5, 0, 0);
+  const windowEnd = new Date(windowStart.getTime() + 5 * 60000 - 1000);
   return updatedAtPH >= windowStart && updatedAtPH <= windowEnd;
 }
 
-async function attemptSend(api, threadID, participants, mode) {
+async function trySend(api, threadID, rarities, retryFlag) {
   const data = await fetchStocks();
-  const { body, updatedAtPH, mentions } = buildMessage(data, participants, mode);
-  if (!body) return false;
+  const updatedAtPH = toPHTime(data.updatedAt);
+  const { message, hasSecret } = buildMessage(data, rarities);
 
   const now = toPHTime(Date.now());
   const minute = Math.floor(now.getMinutes() / 5) * 5;
-  const windowKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${minute}`;
+  const key = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${minute}`;
 
-  if (lastWindowSent[threadID] === windowKey) return false;
-  if (isInWindow(updatedAtPH)) {
-    api.sendMessage({ body, mentions }, threadID);
-    lastWindowSent[threadID] = windowKey;
-    return true;
+  if (lastUpdated[threadID] === key) return false;
+  if (!inCurrentWindow(updatedAtPH)) {
+    if (!retryFlag.flag) retryFlag.flag = true;
+    return false;
   }
-  return false;
+
+  lastUpdated[threadID] = key;
+  const body = hasSecret ? `@everyone\n${message}` : message;
+  api.sendMessage(body, threadID);
+  return true;
 }
 
-function scheduleNext(api, threadID, participants, mode = "best") {
-  if (JamesDahao[threadID]) clearTimeout(JamesDahao[threadID]);
-  const now = toPHTime(Date.now());
-  const next = new Date(now);
-  next.setMinutes(Math.floor(now.getMinutes() / 5) * 5 + 5, 0, 0);
-  const delay = next.getTime() - now.getTime();
+function startAuto(api, threadID, rarities) {
+  if (activeThreads[threadID]) {
+    clearTimeout(activeThreads[threadID]);
+    delete activeThreads[threadID];
+  }
 
-  JamesDahao[threadID] = setTimeout(async function run() {
-    const sent = await attemptSend(api, threadID, participants, mode);
+  api.sendMessage(
+    `🟩 Auto Stocks update started (${rarities.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(", ")})`,
+    threadID
+  );
+
+  const run = async () => {
+    const retryFlag = { flag: false };
+    const sent = await trySend(api, threadID, rarities, retryFlag);
     if (!sent) {
-      const retry = setInterval(async () => {
-        const result = await attemptSend(api, threadID, participants, mode);
-        if (result) clearInterval(retry);
+      const retryInterval = setInterval(async () => {
+        const ok = await trySend(api, threadID, rarities, retryFlag);
+        if (ok) clearInterval(retryInterval);
       }, 5000);
     }
-    scheduleNext(api, threadID, participants, mode);
-  }, delay);
+
+    const now = toPHTime(Date.now());
+    const next = new Date(now.getTime() + 5 * 60000);
+    const delay = next.getTime() - now.getTime();
+    activeThreads[threadID] = setTimeout(run, delay);
+  };
+
+  run();
 }
 
 module.exports = {
@@ -177,54 +155,51 @@ module.exports = {
     name: "stock",
     version: "3.1",
     author: "James Dahao",
-    role: 2,
-    category: "utility",
+    role: 0,
+    shortDescription: "Track PvB stocks by rarity",
+    longDescription:
+      "🪴 Commands:\n" +
+      "• /stock → One-time show of all rarities\n" +
+      "• /stock best → Auto mode (Mythic, Godly, Secret)\n" +
+      "• /stock all → Auto mode (All rarities)\n" +
+      "• /stock <rarity> → One-time show of that rarity\n" +
+      "• /stock off → Stop any running auto mode\n\n" +
+      "🔁 Auto updates every 5 minutes\n" +
+      "🔔 Secret seeds mention @everyone automatically",
+    category: "utility"
   },
 
   onStart: async function ({ api, event, args }) {
     const threadID = event.threadID;
-    const participants = event.participantIDs;
-    const mode = args[0]?.toLowerCase() || "best";
+    const cmd = args[0]?.toLowerCase();
 
-    if (args[0] && args[0].toLowerCase() === "off") {
-      if (JamesDahao[threadID]) {
-        clearTimeout(JamesDahao[threadID]);
-        delete JamesDahao[threadID];
-        api.sendMessage("🟥 Auto Stocks update stopped", threadID);
+    if (cmd === "off") {
+      if (activeThreads[threadID]) {
+        clearTimeout(activeThreads[threadID]);
+        delete activeThreads[threadID];
+        return api.sendMessage("🟥 Auto Stocks update stopped.", threadID);
       }
-      return;
+      return api.sendMessage("⚠️ No active auto mode.", threadID);
     }
 
-    if (mode === "all") {
-      if (JamesDahao[threadID]) clearTimeout(JamesDahao[threadID]);
-      api.sendMessage("🟩 Auto Stocks update started (all rarity)", threadID);
-      scheduleNext(api, threadID, participants, "all");
-      return;
-    }
+    if (cmd === "best") return startAuto(api, threadID, ["mythic", "godly", "secret"]);
+    if (cmd === "all") return startAuto(api, threadID, rarityOrder);
 
-    if (mode === "best") {
-      if (JamesDahao[threadID]) clearTimeout(JamesDahao[threadID]);
-      api.sendMessage("🟩 Auto Stocks update started (Mythic, Godly & Secret)", threadID);
-      scheduleNext(api, threadID, participants, "best");
-      return;
+    if (rarityOrder.includes(cmd)) {
+      const data = await fetchStocks();
+      const { message, hasSecret } = buildMessage(data, [cmd]);
+      const body = hasSecret ? `@everyone\n${message}` : message;
+      return api.sendMessage(body, threadID);
     }
 
     const data = await fetchStocks();
-    const { body, mentions } = buildMessage(data, participants, mode);
-    if (body) api.sendMessage({ body, mentions }, threadID);
-    else api.sendMessage("❌ No stocks found right now.", threadID);
-  },
+    const { message, hasSecret } = buildMessage(data, rarityOrder);
+    const body = hasSecret ? `@everyone\n${message}` : message;
+    api.sendMessage(body, threadID);
 
-  onLoad: async function ({ api }) {
-    for (const threadID of autoStartThreads) {
-      try {
-        const info = await api.getThreadInfo(threadID);
-        const participants = info.participantIDs;
-        scheduleNext(api, threadID, participants, "best");
-        api.sendMessage("🟢 Auto Stocks update initialized (best mode)", threadID);
-      } catch (err) {
-        console.error(`Failed to start auto-stock for ${threadID}:`, err.message);
-      }
+    // ✅ Auto-start /stock best for thread 1606898753628191
+    if (!activeThreads["1606898753628191"]) {
+      startAuto(api, "1606898753628191", ["mythic", "godly", "secret"]);
     }
-  },
+  }
 };
