@@ -54,17 +54,11 @@ function buildMessage(stockData, rarities) {
   const next = new Date(phNow.getTime() + 5 * 60000);
   const { timeStr: nextStr } = formatDateTime(next);
 
-  let lines = [
-    `🌱 Available Stocks 🌱`,
-    ``,
-    `🗓️ Date: ${dateStr}`,
-    `⏳ Now: ${timeStr}`,
-    `⌛ Next: ${nextStr}`,
-    ``
-  ];
-
   const seeds = stockData.items.filter(it => it.category.toLowerCase() === "seed");
+
+  let hasStocks = false;
   let hasSecret = false;
+  let lines = [];
 
   for (const rarity of rarities) {
     const group = seeds.filter(it =>
@@ -72,6 +66,14 @@ function buildMessage(stockData, rarities) {
     );
 
     if (group.length > 0) {
+      if (!hasStocks) {
+        hasStocks = true;
+        lines.push(`🌱 Available Stocks 🌱`, ``);
+        lines.push(`🗓️ Date: ${dateStr}`);
+        lines.push(`⏳ Now: ${timeStr}`);
+        lines.push(`⌛ Next: ${nextStr}`, ``);
+      }
+
       lines.push(`${rarity.charAt(0).toUpperCase() + rarity.slice(1)}:`);
       for (const seed of group) {
         const lower = seed.name.toLowerCase();
@@ -82,13 +84,12 @@ function buildMessage(stockData, rarities) {
         lines.push(`${emoji} ${seed.name}`);
       }
       lines.push("");
-    }
 
-    if (rarity === "secret" && group.length > 0) hasSecret = true;
+      if (rarity === "secret") hasSecret = true;
+    }
   }
 
-  const message = lines.join("\n").trim();
-  return { message, hasSecret };
+  return { message: hasStocks ? lines.join("\n").trim() : null, hasSecret };
 }
 
 function inCurrentWindow(updatedAtPH) {
@@ -160,7 +161,7 @@ function startAuto(api, threadID, rarities) {
 module.exports = {
   config: {
     name: "stock",
-    version: "2.0",
+    version: "2.1",
     author: "James Dahao",
     role: 0,
     Description: "Plant vs Brainrot Stock Tracker",
@@ -194,12 +195,14 @@ module.exports = {
     if (rarityOrder.includes(cmd)) {
       const data = await fetchStocks();
       const { message, hasSecret } = buildMessage(data, [cmd]);
+      if (!message) return; // skip if no stocks
       const body = hasSecret ? `@everyone\n${message}` : message;
       return api.sendMessage(body, threadID);
     }
 
     const data = await fetchStocks();
     const { message, hasSecret } = buildMessage(data, rarityOrder);
+    if (!message) return;
     const body = hasSecret ? `@everyone\n${message}` : message;
     api.sendMessage(body, threadID);
   }
@@ -209,10 +212,10 @@ module.exports = {
 (async () => {
   const bot = global.GoatBot;
   if (!bot) return;
-  const threadID = "1606898753628191";
+  const threadID = "1606898753628191"; // change this to your target thread
   if (!activeThreads[threadID]) {
     bot.api.sendMessage("🤖 Bot Startup: stock best is running", threadID);
-    module.exports.onStart({
+    await module.exports.onStart({
       api: bot.api,
       event: { threadID },
       args: ["best"]
