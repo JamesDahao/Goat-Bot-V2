@@ -87,7 +87,8 @@ function buildMessage(stockData, rarities) {
     if (rarity === "secret" && group.length > 0) hasSecret = true;
   }
 
-  return { message: lines.join("\n"), hasSecret };
+  const message = lines.join("\n").trim();
+  return { message, hasSecret };
 }
 
 function inCurrentWindow(updatedAtPH) {
@@ -103,6 +104,8 @@ async function trySend(api, threadID, rarities, retryFlag) {
   const data = await fetchStocks();
   const updatedAtPH = toPHTime(data.updatedAt);
   const { message, hasSecret } = buildMessage(data, rarities);
+
+  if (!message) return false; // Skip if no stocks available
 
   const now = toPHTime(Date.now());
   const minute = Math.floor(now.getMinutes() / 5) * 5;
@@ -142,8 +145,12 @@ function startAuto(api, threadID, rarities) {
     }
 
     const now = toPHTime(Date.now());
-    const next = new Date(now.getTime() + 5 * 60000);
-    const delay = next.getTime() - now.getTime();
+    const minute = Math.floor(now.getMinutes() / 5) * 5;
+    const windowStart = new Date(now);
+    windowStart.setMinutes(minute, 0, 0);
+    const windowEnd = new Date(windowStart.getTime() + 5 * 60000);
+    const delay = windowEnd.getTime() - now.getTime();
+
     activeThreads[threadID] = setTimeout(run, delay);
   };
 
@@ -153,11 +160,11 @@ function startAuto(api, threadID, rarities) {
 module.exports = {
   config: {
     name: "stock",
-    version: "3.1",
+    version: "3.3",
     author: "James Dahao",
     role: 0,
     shortDescription: "Track PvB stocks by rarity",
-    description:
+    longDescription:
       "🪴 Commands:\n" +
       "• /stock → One-time show of all rarities\n" +
       "• /stock best → Auto mode (Mythic, Godly, Secret)\n" +
@@ -196,11 +203,20 @@ module.exports = {
     const { message, hasSecret } = buildMessage(data, rarityOrder);
     const body = hasSecret ? `@everyone\n${message}` : message;
     api.sendMessage(body, threadID);
-
-    // ✅ Auto-start /stock best for thread 1606898753628191 with startup message
-    if (!activeThreads["1606898753628191"]) {
-      api.sendMessage("🤖 Bot Startup: stock best running", "1606898753628191");
-      startAuto(api, "1606898753628191", ["mythic", "godly", "secret"]);
-    }
   }
 };
+
+// 📌 Auto start stock best at bot startup
+(async () => {
+  const bot = global.GoatBot;
+  if (!bot) return;
+  const threadID = "1606898753628191";
+  if (!activeThreads[threadID]) {
+    bot.api.sendMessage("🤖 Bot Startup: stock best is running", threadID);
+    module.exports.onStart({
+      api: bot.api,
+      event: { threadID },
+      args: ["best"]
+    });
+  }
+})();
