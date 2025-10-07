@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: write
   actions: write
 
 jobs:
@@ -32,15 +33,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Start bot (5 hour)
+      - name: Start bot (5 hours)
         run: |
-          echo "Running bot for 5 hour..."
+          echo "Running bot for 5 hours..."
           timeout 18000s npm start || echo "Bot stopped after timeout"
           echo "Bot process ended, continuing to cancel/restart steps."
 
       - name: Cancel previous workflow run (if exists)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           echo "Checking for other in-progress runs..."
           RUNNING=$(gh run list --workflow="Node.js CI" --status=in_progress --limit 1 --json databaseId,url | jq -r '.[0]')
@@ -53,9 +54,14 @@ jobs:
             echo "No other runs found."
           fi
 
+      - name: Wait before restart
+        run: |
+          echo "Waiting 60 seconds before restarting..."
+          sleep 60
+
       - name: Restart workflow
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           echo "Restarting workflow..."
           gh workflow run "Node.js CI" --ref ${{ github.ref }}
