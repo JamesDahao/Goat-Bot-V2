@@ -172,7 +172,7 @@ module.exports = {
       "• /stock <rarity> → One-time show of that rarity\n" +
       "• /stock off → Stop any running auto mode\n\n" +
       "🔁 Auto updates every 5 minutes\n" +
-      "🔔 Secret seeds mention @everyone automatically"
+      "🔔 Secret seeds mention @everyone automatically",
   },
 
   onStart: async function ({ api, event, args }) {
