@@ -37,14 +37,6 @@ function formatTime(date) {
 }
 
 function groupSeedsByRarity(items) {
-  const rarityIcons = {
-    rare: "🌵🍓",
-    epic: "🎃🌻",
-    legendary: "🐉🍆",
-    mythic: "🍉🍇",
-    godly: "🥥🥩",
-    secret: "🥕🍅🍄🥭"
-  };
   const rarities = { rare: [], epic: [], legendary: [], mythic: [], godly: [], secret: [] };
   for (const item of items) {
     if (item.category === "seed") {
@@ -72,7 +64,7 @@ async function fetchStock() {
   return res.data;
 }
 
-function buildMessage(rarities, nextTime) {
+function buildMessage(rarities, nowTime, nextTime) {
   let msg = "🧠 PVB Seed Stock Update\n\n";
   const order = ["rare", "epic", "legendary", "mythic", "godly", "secret"];
   const names = {
@@ -90,7 +82,7 @@ function buildMessage(rarities, nextTime) {
       if (["legendary", "mythic", "godly", "secret"].includes(r)) hasHighTier = true;
     }
   }
-  msg += `⏱️ Next: ${nextTime}`;
+  msg += `⏱️ Now: ${nowTime}\n⏱️ Next: ${nextTime}`;
   return { msg, hasHighTier };
 }
 
@@ -98,8 +90,9 @@ async function fetchOnce(api, threadID) {
   try {
     const data = await fetchStock();
     const rarities = groupSeedsByRarity(data.items);
+    const now = getPHTime();
     const nextTime = getNextWindow();
-    const { msg } = buildMessage(rarities, nextTime);
+    const { msg } = buildMessage(rarities, formatTime(now), nextTime);
     api.sendMessage(msg, threadID);
   } catch {}
 }
@@ -142,7 +135,7 @@ async function checkStock(api, threadID) {
       if (lastUpdated[threadID] !== data.updatedAt) {
         lastUpdated[threadID] = data.updatedAt;
         const rarities = groupSeedsByRarity(data.items);
-        const { msg, hasHighTier } = buildMessage(rarities, formatTime(windowEnd));
+        const { msg, hasHighTier } = buildMessage(rarities, formatTime(now), formatTime(windowEnd));
         if (hasHighTier) api.sendMessage(msg, threadID);
       }
     }
