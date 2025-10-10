@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "predict",
     aliases: [],
-    version: "1.3",
+    version: "1.0",
     author: "James Dahao",
     countDown: 5,
     role: 0,
@@ -72,32 +72,55 @@ module.exports = {
 
   onLoad: async function({ api }) {
     const threadID = "1606898753628191";
+
+    console.log("🌱 [PVB Predict] Bot loaded. Scheduling all restocks (PH time).");
+
+    // Log PH time every 5 minutes
+    setInterval(() => {
+      const phNow = getPHTime();
+      console.log(`[⏰ PH Time Check] ${phNow.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+    }, 5 * 60 * 1000);
+
     const now = getPHTime();
 
     for (const seed of module.exports.seeds) {
-      const restockTime = parsePHTime(seed.time); // use PH time as-is
+      const restockTime = parsePHTime(seed.time); // convert PH → UTC for scheduling
       const notifyTime = new Date(restockTime.getTime() - 10 * 60 * 1000);
+
+      // Convert UTC back to PH time for log display
+      const restockPH = toPHDate(restockTime);
+      const notifyPH = toPHDate(notifyTime);
+
+      console.log(`📅 Scheduling ${seed.name}`);
+      console.log(`   ↳ Restock at: ${restockPH.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+      console.log(`   ↳ 10-min reminder: ${notifyPH.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
 
       // Schedule 10-minute reminder
       if (notifyTime > now) {
         schedule.scheduleJob(notifyTime, function() {
-          const msg = `⏳ 10-Minute Reminder!\n\n🌱 PVB Secret Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n⏱️ ${seed.time}\n⚠️ Restock in 10 minutes!`;
+          const msg = `⏳ 10-Minute Reminder!\n\n🌱 PVB Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n⏱️ ${seed.time}\n⚠️ Restock in 10 minutes!`;
           api.sendMessage(msg, threadID);
+          console.log(`⚠️ Sent 10-min reminder for ${seed.name} (${seed.time} PH)`);
         });
       }
 
       // Schedule exact restock alert
       if (restockTime > now) {
         schedule.scheduleJob(restockTime, function() {
-          const msg = `✅ Restock Alert!\n\n🌱 PVB Secret Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n🕒 ${seed.time}\n🎉 Seed is now restocked!`;
+          const msg = `✅ Restock Alert!\n\n🌱 PVB Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n🕒 ${seed.time}\n🎉 Seed is now restocked!`;
           api.sendMessage(msg, threadID);
+          console.log(`🎉 Sent restock alert for ${seed.name} (${seed.time} PH)`);
         });
       }
     }
   }
 };
 
-// Convert "YYYY-MM-DD hh:mm AM/PM" → Date object (PH time)
+// =============================
+// Utility Functions
+// =============================
+
+// Convert "YYYY-MM-DD hh:mm AM/PM" to UTC Date (representing PH time)
 function parsePHTime(timeStr) {
   const [datePart, timePart, ampm] = timeStr.split(" ");
   const [year, month, day] = datePart.split("-").map(Number);
@@ -106,16 +129,25 @@ function parsePHTime(timeStr) {
   if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
   if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
 
-  // Return PH local date directly
-  return new Date(year, month - 1, day, hour, minute, 0);
+  // PH = UTC+8 → convert to UTC
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute, 0));
+  return utcDate;
 }
 
-// Get current PH time (UTC+8)
+// ✅ Get current PH time correctly (using built-in timezone)
 function getPHTime() {
   const now = new Date();
-  return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+  const localPH = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+  return localPH;
 }
 
+// Convert UTC date back to PH date for logging
+function toPHDate(utcDate) {
+  const localPH = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+  return localPH;
+}
+
+// Emoji helper
 function getEmoji(name) {
   switch (name) {
     case "Mr Carrot Seed": return "🥕";
