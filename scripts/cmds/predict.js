@@ -9,7 +9,7 @@ module.exports = {
     countDown: 5,
     role: 0,
     shortDescription: "Show and auto notify PVB Secret Seed Prediction",
-    Description: "Displays upcoming secret seed restocks and automatically notifies 10 minutes before each restock in Philippine time.",
+    description: "Displays upcoming secret seed restocks and automatically notifies 10 minutes before each restock in Philippine time.",
     category: "fun",
     guide: { en: "{pn}" }
   },
