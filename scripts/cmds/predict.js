@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "predict",
     aliases: [],
-    version: "1.1",
+    version: "1.2",
     author: "James Dahao",
     countDown: 5,
     role: 0,
@@ -57,6 +57,7 @@ module.exports = {
       if (!grouped[seed.name]) grouped[seed.name] = [];
       grouped[seed.name].push(seed.time);
     });
+
     let msg = "🌱 PVB Secret Seed Prediction 🌱\n\n";
     for (const [name, times] of Object.entries(grouped)) {
       msg += `${getEmoji(name)} ${name}\n--------------------\n`;
@@ -65,6 +66,7 @@ module.exports = {
       });
       msg += "\n";
     }
+
     message.reply(msg);
   },
 
@@ -73,11 +75,7 @@ module.exports = {
     const now = new Date();
 
     for (const seed of module.exports.seeds) {
-      // Convert "YYYY-MM-DD hh:mm AM/PM" to a valid Date
-      const parsed = new Date(
-        seed.time.replace(" ", "T").replace("AM", "").replace("PM", "") + "+08:00"
-      );
-      const restockTime = parsed;
+      const restockTime = parsePHTime(seed.time);
       const notifyTime = new Date(restockTime.getTime() - 10 * 60 * 1000);
 
       // Notify 10 minutes before
@@ -98,6 +96,20 @@ module.exports = {
     }
   }
 };
+
+// 🕓 Helper to correctly parse PH time with AM/PM
+function parsePHTime(timeStr) {
+  const [datePart, timePart, ampm] = timeStr.split(" ");
+  const [year, month, day] = datePart.split("-").map(Number);
+  let [hour, minute] = timePart.split(":").map(Number);
+
+  if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
+  if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
+
+  // Create Date in PH timezone (UTC+8)
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute));
+  return new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+}
 
 function getEmoji(name) {
   switch (name) {
