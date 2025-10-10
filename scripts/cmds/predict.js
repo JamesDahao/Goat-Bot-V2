@@ -9,32 +9,32 @@ module.exports = {
     countDown: 5,
     role: 0,
     shortDescription: "Show and auto notify PVB Secret Seed Prediction",
-    description: "Displays upcoming secret seed restocks and automatically notifies 10 minutes before each restock in Philippine time.",
+    description: "Displays upcoming secret seed restocks and automatically notifies 10 minutes before each restock.",
     category: "fun",
     guide: { en: "{pn}" }
   },
 
   seeds: [
-    { name: "Mr Carrot", time: "2025-10-11 05:20:00" },
-    { name: "Mr Carrot", time: "2025-10-11 11:00:00" },
-    { name: "Mr Carrot", time: "2025-10-11 23:05:00" },
-    { name: "Mr Carrot", time: "2025-10-12 21:20:00" },
-    { name: "Mr Carrot", time: "2025-10-13 07:45:00" },
-    { name: "Tomatrio", time: "2025-10-11 14:00:00" },
-    { name: "Tomatrio", time: "2025-10-11 15:05:00" },
-    { name: "Tomatrio", time: "2025-10-11 18:55:00" },
-    { name: "Tomatrio", time: "2025-10-11 19:10:00" },
-    { name: "Tomatrio", time: "2025-10-11 19:40:00" },
-    { name: "Shroombino", time: "2025-10-11 06:00:00" },
-    { name: "Shroombino", time: "2025-10-12 09:10:00" },
-    { name: "Shroombino", time: "2025-10-12 22:35:00" },
-    { name: "Shroombino", time: "2025-10-13 01:20:00" },
-    { name: "Shroombino", time: "2025-10-13 11:05:00" },
-    { name: "Mango", time: "2025-10-12 11:50:00" },
-    { name: "Mango", time: "2025-10-12 20:55:00" },
-    { name: "Mango", time: "2025-10-13 20:10:00" },
-    { name: "Mango", time: "2025-10-15 12:15:00" },
-    { name: "Mango", time: "2025-10-16 16:15:00" }
+    { name: "Mango Seed", time: "2025-10-12 03:50:00" },
+    { name: "Mango Seed", time: "2025-10-12 12:55:00" },
+    { name: "Mango Seed", time: "2025-10-13 12:10:00" },
+    { name: "Mango Seed", time: "2025-10-15 04:15:00" },
+    { name: "Mango Seed", time: "2025-10-16 08:15:00" },
+    { name: "Mr Carrot Seed", time: "2025-10-10 21:20:00" },
+    { name: "Mr Carrot Seed", time: "2025-10-11 03:00:00" },
+    { name: "Mr Carrot Seed", time: "2025-10-11 15:05:00" },
+    { name: "Mr Carrot Seed", time: "2025-10-12 13:20:00" },
+    { name: "Mr Carrot Seed", time: "2025-10-12 23:45:00" },
+    { name: "Tomatrio Seed", time: "2025-10-11 06:00:00" },
+    { name: "Tomatrio Seed", time: "2025-10-11 07:05:00" },
+    { name: "Tomatrio Seed", time: "2025-10-11 10:55:00" },
+    { name: "Tomatrio Seed", time: "2025-10-11 11:10:00" },
+    { name: "Tomatrio Seed", time: "2025-10-11 11:40:00" },
+    { name: "Shroombino Seed", time: "2025-10-10 22:00:00" },
+    { name: "Shroombino Seed", time: "2025-10-12 01:10:00" },
+    { name: "Shroombino Seed", time: "2025-10-12 14:35:00" },
+    { name: "Shroombino Seed", time: "2025-10-12 17:20:00" },
+    { name: "Shroombino Seed", time: "2025-10-13 03:05:00" }
   ],
 
   onStart: async function({ message }) {
@@ -43,7 +43,7 @@ module.exports = {
       if (!grouped[seed.name]) grouped[seed.name] = [];
       grouped[seed.name].push(seed.time);
     });
-    let msg = "🌱 PVB Secret Seed Prediction 🌱\n(All times in 🇵🇭 Philippine Time)\n\n";
+    let msg = "🌱 PVB Secret Seed Prediction 🌱\n\n";
     for (const [name, times] of Object.entries(grouped)) {
       msg += `${getEmoji(name)} ${name}\n--------------------\n`;
       times.forEach((time, i) => {
@@ -72,10 +72,10 @@ module.exports = {
 
 function getEmoji(name) {
   switch (name) {
-    case "Mr Carrot": return "🥕";
-    case "Tomatrio": return "🍅";
-    case "Shroombino": return "🍄";
-    case "Mango": return "🥭";
+    case "Mr Carrot Seed": return "🥕";
+    case "Tomatrio Seed": return "🍅";
+    case "Shroombino Seed": return "🍄";
+    case "Mango Seed": return "🥭";
     default: return "🌱";
   }
 }
