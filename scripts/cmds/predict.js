@@ -4,12 +4,12 @@ module.exports = {
   config: {
     name: "predict",
     aliases: [],
-    version: "1.2",
+    version: "1.3",
     author: "James Dahao",
     countDown: 5,
     role: 0,
     shortDescription: "Show and auto notify PVB Secret Seed Prediction",
-    description: "Displays upcoming seed restocks and automatically notifies 10 minutes before and when restocked.",
+    description: "Displays upcoming seed restocks and automatically notifies 10 minutes before and when restocked (PH time).",
     category: "fun",
     guide: { en: "{pn}" }
   },
@@ -72,13 +72,13 @@ module.exports = {
 
   onLoad: async function({ api }) {
     const threadID = "1606898753628191";
-    const now = new Date();
+    const now = getPHTime();
 
     for (const seed of module.exports.seeds) {
-      const restockTime = parsePHTime(seed.time);
+      const restockTime = parsePHTime(seed.time); // use PH time as-is
       const notifyTime = new Date(restockTime.getTime() - 10 * 60 * 1000);
 
-      // Notify 10 minutes before
+      // Schedule 10-minute reminder
       if (notifyTime > now) {
         schedule.scheduleJob(notifyTime, function() {
           const msg = `⏳ 10-Minute Reminder!\n\n🌱 PVB Secret Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n⏱️ ${seed.time}\n⚠️ Restock in 10 minutes!`;
@@ -86,7 +86,7 @@ module.exports = {
         });
       }
 
-      // Notify when restock happens
+      // Schedule exact restock alert
       if (restockTime > now) {
         schedule.scheduleJob(restockTime, function() {
           const msg = `✅ Restock Alert!\n\n🌱 PVB Secret Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n🕒 ${seed.time}\n🎉 Seed is now restocked!`;
@@ -97,7 +97,7 @@ module.exports = {
   }
 };
 
-// 🕓 Helper to correctly parse PH time with AM/PM
+// Convert "YYYY-MM-DD hh:mm AM/PM" → Date object (PH time)
 function parsePHTime(timeStr) {
   const [datePart, timePart, ampm] = timeStr.split(" ");
   const [year, month, day] = datePart.split("-").map(Number);
@@ -106,9 +106,14 @@ function parsePHTime(timeStr) {
   if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
   if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
 
-  // Create Date in PH timezone (UTC+8)
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute));
-  return new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+  // Return PH local date directly
+  return new Date(year, month - 1, day, hour, minute, 0);
+}
+
+// Get current PH time (UTC+8)
+function getPHTime() {
+  const now = new Date();
+  return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 }
 
 function getEmoji(name) {
