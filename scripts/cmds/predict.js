@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "predict",
     aliases: [],
-    version: "1.0",
+    version: "1.1",
     author: "James Dahao",
     countDown: 5,
     role: 0,
@@ -48,6 +48,7 @@ module.exports = {
       if (!grouped[seed.name]) grouped[seed.name] = [];
       grouped[seed.name].push(seed.time);
     });
+
     let msg = "🌱 PVB Secret Seed Prediction 🌱\n\n";
     for (const [name, times] of Object.entries(grouped)) {
       msg += `${getEmoji(name)} ${name}\n--------------------\n`;
@@ -62,19 +63,21 @@ module.exports = {
   onLoad: async function({ api }) {
     const threadID = "1606898753628191";
     console.log("🌱 [PVB Predict] Bot loaded. Scheduling all restocks (PH time).");
+
     setInterval(() => {
-      const phNow = getPHTime();
-      console.log(`[⏰ PH Time Check] ${phNow.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+      const phNow = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+      console.log(`[⏰ PH Time Check] ${phNow}`);
     }, 5 * 60 * 1000);
-    const now = getPHTime();
+
     for (const seed of module.exports.seeds) {
       const restockTime = parsePHTime(seed.time);
       const notifyTime = new Date(restockTime.getTime() - 10 * 60 * 1000);
-      const restockPH = toPHDate(restockTime);
-      const notifyPH = toPHDate(notifyTime);
+      const now = getNowPH();
+
       console.log(`📅 Scheduling ${seed.name}`);
-      console.log(`   ↳ Restock at: ${restockPH.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
-      console.log(`   ↳ 10-min reminder: ${notifyPH.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+      console.log(`   ↳ Restock at: ${restockTime.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+      console.log(`   ↳ 10-min reminder: ${notifyTime.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+
       if (notifyTime > now) {
         schedule.scheduleJob(notifyTime, function() {
           const msg = `⏳ 10-Minute Reminder!\n\n🌱 PVB Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n⏱️ ${seed.time}\n⚠️ Restock in 10 minutes!`;
@@ -82,6 +85,7 @@ module.exports = {
           console.log(`⚠️ Sent 10-min reminder for ${seed.name} (${seed.time} PH)`);
         });
       }
+
       if (restockTime > now) {
         schedule.scheduleJob(restockTime, function() {
           const msg = `✅ Restock Alert!\n\n🌱 PVB Seed Prediction 🌱\n\n${getEmoji(seed.name)} ${seed.name}\n[1] Stock: 1\n🕒 ${seed.time}\n🎉 Seed is now restocked!`;
@@ -99,16 +103,12 @@ function parsePHTime(timeStr) {
   let [hour, minute] = timePart.split(":").map(Number);
   if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
   if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-  return utcDate;
+  const d = new Date(Date.UTC(year, month - 1, day, hour - 8, minute)); // subtract 8 hours to store correctly in UTC
+  return d;
 }
 
-function getPHTime() {
-  return new Date(new Date().getTime() + 8 * 60 * 60 * 1000);
-}
-
-function toPHDate(utcDate) {
-  return new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+function getNowPH() {
+  return new Date();
 }
 
 function getEmoji(name) {
