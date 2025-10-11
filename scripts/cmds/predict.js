@@ -15,31 +15,40 @@ module.exports = {
   },
 
   seeds: [
+    // Mango Seed
     { name: "Mango Seed", time: "2025-10-12 03:50 AM" },
     { name: "Mango Seed", time: "2025-10-12 12:55 PM" },
     { name: "Mango Seed", time: "2025-10-13 12:10 PM" },
     { name: "Mango Seed", time: "2025-10-15 04:15 AM" },
     { name: "Mango Seed", time: "2025-10-16 08:15 AM" },
-    { name: "Mr Carrot Seed", time: "2025-10-11 03:00 AM" },
+
+    // Mr Carrot Seed
     { name: "Mr Carrot Seed", time: "2025-10-11 03:05 PM" },
     { name: "Mr Carrot Seed", time: "2025-10-12 01:20 PM" },
     { name: "Mr Carrot Seed", time: "2025-10-12 11:45 PM" },
     { name: "Mr Carrot Seed", time: "2025-10-13 05:45 PM" },
-    { name: "Tomatrio Seed", time: "2025-10-11 06:00 AM" },
-    { name: "Tomatrio Seed", time: "2025-10-11 07:05 AM" },
-    { name: "Tomatrio Seed", time: "2025-10-11 10:55 AM" },
-    { name: "Tomatrio Seed", time: "2025-10-11 11:10 AM" },
-    { name: "Tomatrio Seed", time: "2025-10-11 11:40 AM" },
+    { name: "Mr Carrot Seed", time: "2025-10-13 08:35 PM" },
+
+    // Tomatrio Seed
+    { name: "Tomatrio Seed", time: "2025-10-12 08:25 PM" },
+    { name: "Tomatrio Seed", time: "2025-10-13 09:30 AM" },
+    { name: "Tomatrio Seed", time: "2025-10-14 03:10 AM" },
+    { name: "Tomatrio Seed", time: "2025-10-14 06:10 PM" },
+    { name: "Tomatrio Seed", time: "2025-10-14 07:55 PM" },
+
+    // Shroombino Seed
     { name: "Shroombino Seed", time: "2025-10-12 01:10 AM" },
     { name: "Shroombino Seed", time: "2025-10-12 02:35 PM" },
     { name: "Shroombino Seed", time: "2025-10-12 05:20 PM" },
     { name: "Shroombino Seed", time: "2025-10-13 03:05 AM" },
     { name: "Shroombino Seed", time: "2025-10-13 06:05 AM" },
-    { name: "Carnivorous Plant Seed", time: "2025-10-11 12:15 AM" },
-    { name: "Carnivorous Plant Seed", time: "2025-10-11 07:35 AM" },
+
+    // Carnivorous Plant Seed
     { name: "Carnivorous Plant Seed", time: "2025-10-12 06:00 AM" },
     { name: "Carnivorous Plant Seed", time: "2025-10-12 07:55 PM" },
-    { name: "Carnivorous Plant Seed", time: "2025-10-12 09:30 PM" }
+    { name: "Carnivorous Plant Seed", time: "2025-10-12 09:30 PM" },
+    { name: "Carnivorous Plant Seed", time: "2025-10-12 09:40 PM" },
+    { name: "Carnivorous Plant Seed", time: "2025-10-13 01:25 AM" }
   ],
 
   onStart: async function({ message }) {
@@ -49,7 +58,7 @@ module.exports = {
       grouped[seed.name].push(seed.time);
     });
 
-    let msg = "🌱 PVB Secret Seed Prediction 🌱\n\n";
+    let msg = "🌱 PVB Seed Prediction 🌱\n\n";
     for (const [name, times] of Object.entries(grouped)) {
       msg += `${getEmoji(name)} ${name}\n--------------------\n`;
       times.forEach((time, i) => {
@@ -103,7 +112,7 @@ function parsePHTime(timeStr) {
   let [hour, minute] = timePart.split(":").map(Number);
   if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
   if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
-  const d = new Date(Date.UTC(year, month - 1, day, hour - 8, minute)); // subtract 8 hours to store correctly in UTC
+  const d = new Date(Date.UTC(year, month - 1, day, hour - 8, minute));
   return d;
 }
 
