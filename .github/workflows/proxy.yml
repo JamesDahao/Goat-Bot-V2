@@ -1,4 +1,4 @@
-name: Proxy
+name: Node.js CI
 
 on:
   workflow_dispatch:
@@ -14,17 +14,22 @@ jobs:
       matrix:
         node-version: [20.x]
 
+    # 🔥 GLOBAL PROXY (applies to ALL steps)
+    env:
+      http_proxy: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
+      https_proxy: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
+      HTTP_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
+      HTTPS_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+
     steps:
-      # 1️⃣ Checkout code
       - uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
 
-      # 3️⃣ Install GitHub CLI & jq
       - name: Install GitHub CLI & jq
         run: |
           if ! gh --version; then
@@ -33,35 +38,15 @@ jobs:
             echo "GitHub CLI and jq already installed"
           fi
 
-      # 4️⃣ Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # 5️⃣ Pre-check proxy
-      - name: Test PH proxy
-        env:
-          http_proxy: http://country-philippines:${{ secrets.PROXY_PASS }}@proxy.proxyverse.io:9200
-          https_proxy: http://country-philippines:${{ secrets.PROXY_PASS }}@proxy.proxyverse.io:9200
-        run: |
-          echo "Checking PH proxy connectivity..."
-          if curl -s -o /dev/null -w "%{http_code}" https://api.api-pba1.com | grep -q "407"; then
-            echo "Proxy blocked (407), aborting bot run"
-            exit 1
-          else
-            echo "Proxy OK"
-          fi
-
-      # 6️⃣ Start bot (with proxy)
       - name: Start bot (5 hours)
-        env:
-          http_proxy: http://country-philippines:${{ secrets.PROXY_PASS }}@proxy.proxyverse.io:9200
-          https_proxy: http://country-philippines:${{ secrets.PROXY_PASS }}@proxy.proxyverse.io:9200
         run: |
           echo "Running bot for 5 hours..."
           timeout 18000s npm start || echo "Bot stopped after timeout"
           echo "Bot process ended, continuing to cancel/restart steps."
 
-      # 7️⃣ Cancel previous workflow run (if exists)
       - name: Cancel previous workflow run (if exists)
         env:
           GH_TOKEN: ${{ secrets.PAT }}
@@ -77,13 +62,11 @@ jobs:
             echo "No other runs found."
           fi
 
-      # 8️⃣ Wait before restart
       - name: Wait before restart
         run: |
           echo "Waiting 60 seconds before restarting..."
           sleep 60
 
-      # 9️⃣ Restart workflow
       - name: Restart workflow
         env:
           GH_TOKEN: ${{ secrets.PAT }}
