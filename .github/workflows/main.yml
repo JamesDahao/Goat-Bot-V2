@@ -12,10 +12,12 @@ jobs:
         node-version: [20.x]
     steps:
       - uses: actions/checkout@v3
+      
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+          
       - name: Install GitHub CLI & jq
         run: |
           if ! gh --version; then
@@ -27,16 +29,17 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-          # This ensures the proxy library is available even if not in package.json
+          # Explicitly install the proxy agent so the script finds it
           npm install https-proxy-agent 
 
       - name: Start bot (5 hours)
         env:
-          # Fallback: Many Node libraries look for these automatically
+          # Standard environment variables for proxying
           HTTP_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
           HTTPS_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
         run: |
           echo "Running bot for 5 hours..."
+          # Running 'npm start' directly; ensure logic is inside 'onStart'
           timeout 18000s npm start || echo "Bot stopped after timeout"
           echo "Bot process ended, continuing to cancel/restart steps."
 
@@ -45,8 +48,9 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
           echo "Checking for other in-progress runs..."
+          # Fix for potential JSON parsing errors
           RUNNING=$(gh run list --workflow="Node.js CI" --status=in_progress --limit 1 --json databaseId,url | jq -r '.[0]')
-          if [ "$RUNNING" != "null" ]; then
+          if [ "$RUNNING" != "null" ] && [ -n "$RUNNING" ]; then
             RUN_ID=$(echo $RUNNING | jq -r '.databaseId')
             RUN_URL=$(echo $RUNNING | jq -r '.url')
             echo "Cancelling previous run: $RUN_URL"
