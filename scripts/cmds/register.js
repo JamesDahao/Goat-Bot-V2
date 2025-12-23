@@ -1,34 +1,41 @@
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
+const { HttpsProxyAgent } = require("https-proxy-agent");
 
 module.exports = {
   config: {
     name: "reg",
     aliases: ["register"],
-    version: "1.2",
+    version: "1.4",
     author: "James",
     role: 0,
-    description: "Register random accounts",
+    description: "Register random accounts using PH proxy",
     category: "box chat",
     guide: {
-      en: "{pn} <PH|VN> <count> <agentid>"
+      en: "{pn} <count> <agentid>"
     }
   },
 
   onStart: async function ({ message, args }) {
-    const country = (args[0] || "").toUpperCase();
-    const count = parseInt(args[1]);
-    const agentid = args[2];
+    const count = parseInt(args[0]);
+    const agentid = args[1];
 
-    if (!["PH", "VN"].includes(country) || !count || !agentid) {
-      return message.reply("Usage: /reg PH 1 10385111");
+    if (!count || !agentid) {
+      return message.reply("Usage: /reg 1 10385111");
     }
 
     const results = [];
 
     for (let i = 0; i < count; i++) {
-      const phone = randomPhone(country);
+      const phone = randomPHPhone();
       const deviceId = `android_${uuidv4()}`;
+
+      // ===== PROXY (PHILIPPINES) =====
+      const PROXY_USER = "country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74";
+      const PROXY_HOST = "proxy.proxyverse.io:9200";
+      const agent = new HttpsProxyAgent(
+        `http://${PROXY_USER}@${PROXY_HOST}`
+      );
 
       try {
         const payload = new URLSearchParams({
@@ -50,7 +57,7 @@ module.exports = {
           domain: "https://api.api-pba1.com",
           loadLocation: "https://www.pbawin9.com/",
           os: "Android",
-          area: country === "PH" ? "63" : "84",
+          area: "63",
           tel: phone,
           pwd: "Haha1234",
           pwd_confirmation: "Haha1234",
@@ -65,7 +72,8 @@ module.exports = {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded"
             },
-            timeout: 15000
+            httpsAgent: agent,
+            timeout: 20000
           }
         );
 
@@ -84,22 +92,15 @@ module.exports = {
     }
 
     message.reply(
-      `📋 Registration Result (${country})\n\n` + results.join("\n\n")
+      `📋 Registration Result (PH)\n\n` + results.join("\n\n")
     );
   }
 };
 
 /* ================= HELPERS ================= */
 
-function randomPhone(country) {
-  if (country === "PH") {
-    return "63" + "9" + randDigits(9);
-  }
-
-  if (country === "VN") {
-    const prefixes = ["3", "5", "7", "8", "9"];
-    return "84" + prefixes[Math.floor(Math.random() * prefixes.length)] + randDigits(8);
-  }
+function randomPHPhone() {
+  return "63" + "9" + randDigits(9);
 }
 
 function randDigits(len) {
