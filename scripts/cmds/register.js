@@ -1,5 +1,10 @@
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
+const { HttpsProxyAgent } = require("https-proxy-agent");
+
+// Proxy configuration with your credentials
+const proxyUrl = "http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200";
+const agent = new HttpsProxyAgent(proxyUrl);
 
 module.exports = {
   config: {
@@ -42,7 +47,7 @@ module.exports = {
           dataVersion: "1766430001",
           nativeVer: "0",
           domain: "https://api.api-pba1.com",
-          loadLocation: "https://www.pbawin9.com/",
+          loadLocation: "www.pbawin9.com",
           os: "Android",
           area: "PH",
           tel: phone,
@@ -52,13 +57,17 @@ module.exports = {
         });
 
         const res = await axios.post(
-          "https://api.api-pba1.com/login/register",
+          "api.api-pba1.com",
           payload.toString(),
           {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
               "User-Agent": randomUserAgent()
             },
+            // Configure Axios to use the proxy agent for this request
+            httpsAgent: agent,
+            httpAgent: agent,
+            proxy: false, // Disables Axios built-in proxy logic in favor of the agent
             timeout: 30000,
             validateStatus: () => true
           }
@@ -69,7 +78,7 @@ module.exports = {
         );
       } catch (err) {
         results.push(
-          `📶 ${phone}\n❌ ${err.message}`
+          `📶 ${phone}\n❌ Proxy/Request Error: ${err.message}`
         );
       }
     }
