@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [18.x]  # <- Changed from 20.x to 18.x
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4  # <- Use latest setup-node
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -30,8 +30,10 @@ jobs:
             echo "GitHub CLI and jq already installed"
           fi
 
-      - name: Install dependencies
-        run: npm install
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
 
       - name: Start bot (5 hours)
         run: |
