@@ -1,5 +1,9 @@
+
 // main.js
-// Combined auto-restart + express server
+
+// ===== Quick hack for Node 18 / undici / cheerio =====
+global.File = class File {};
+// ======================================================
 
 const { spawn } = require("child_process");
 const log = require("./logger/log.js");
