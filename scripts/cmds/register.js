@@ -5,11 +5,12 @@ const { v4: uuidv4 } = require("uuid");
 module.exports = {
   config: {
     name: "reg",
+    aliases: ["register"],
     version: "1.0",
     author: "James",
     role: 0,
     description: "Register random accounts",
-    category: "tool",
+    category: "box chat",
     guide: {
       en: "{pn} <PH|VN> <count> <agentid>"
     }
@@ -34,9 +35,7 @@ module.exports = {
         const proxyUser = `country-${country}:17e3dd22-29f1-4435-a876-2ea72fea1a74`;
         const proxyHost = "http://proxy.proxyverse.io:9200";
 
-        const agent = new HttpsProxyAgent(
-          `http://${proxyUser}@${proxyHost}`
-        );
+        const agent = new HttpsProxyAgent(`http://${proxyUser}@${proxyHost}`);
 
         const payload = new URLSearchParams({
           language: "en-us",
