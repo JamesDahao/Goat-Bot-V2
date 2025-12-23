@@ -1,19 +1,24 @@
+
+anged
++67
+-0
+lines changed
+Search within code
+ 
+‎.github/workflows/main.yml‎
++67
+Lines changed: 67 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,67 @@
 name: Node.js CI
-
-on: workflow_dispatch:
-
+on:
+  workflow_dispatch:
 permissions:
   contents: write
   actions: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Add environment variables here, using secrets for sensitive information
-    env:
-      http_proxy: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
-      https_proxy: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
-      # You can also use GitHub secrets for security, e.g., ${{ secrets.PROXY_URL }}
     strategy:
       matrix:
         node-version: [20.x]
