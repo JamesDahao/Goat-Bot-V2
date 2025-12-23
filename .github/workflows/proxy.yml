@@ -1,4 +1,4 @@
-name: Node.js CI
+name: Proxy
 
 on:
   workflow_dispatch:
