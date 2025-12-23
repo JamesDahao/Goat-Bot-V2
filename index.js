@@ -1,4 +1,3 @@
-
 // main.js
 
 // ======================================================
@@ -7,6 +6,17 @@ const { spawn } = require("child_process");
 const log = require("./logger/log.js");
 const express = require("express");
 const path = require("path");
+
+// ---------------- Patch utils.error -----------------
+try {
+  const utils = require("./utils"); // adjust path if utils.js is elsewhere
+  if (typeof utils.error !== "function") {
+    utils.error = (...args) => console.error(...args);
+  }
+} catch (e) {
+  console.warn("Could not patch utils.error:", e);
+}
+// -----------------------------------------------------
 
 let restartCount = 0;
 const maxRestarts = 5;
