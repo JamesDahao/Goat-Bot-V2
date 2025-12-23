@@ -1,3 +1,4 @@
+// ---------- MAIN ----------
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 
@@ -5,14 +6,12 @@ module.exports = {
   config: {
     name: "reg",
     aliases: ["register"],
-    version: "1.4",
+    version: "1.5",
     author: "James",
     role: 0,
-    description: "Register accounts",
+    description: "Register accounts with PH-like IPs",
     category: "box chat",
-    guide: {
-      en: "{pn} <PH|VN> <count> <agentid>"
-    }
+    guide: { en: "{pn} <PH|VN> <count> <agentid>" }
   },
 
   onStart: async function ({ message, args }) {
@@ -29,7 +28,7 @@ module.exports = {
     for (let i = 0; i < count; i++) {
       const phone = randomPhone(country);
       const deviceId = `android_${uuidv4()}`;
-      const fakeIp = randomIP(); // random IP per account
+      const fakeIp = country === "PH" ? randomPHIP() : randomIP();
 
       const payload = new URLSearchParams({
         language: "en-us",
@@ -42,7 +41,7 @@ module.exports = {
         platform: "android",
         deviceid: deviceId,
         device_id: deviceId,
-        agentid: agentid,
+        agentid,
         firstInstall: "false",
         Type: "101",
         dataVersion: "1766430001",
@@ -92,8 +91,7 @@ module.exports = {
   }
 };
 
-/* ---------- HELPERS ---------- */
-
+// ---------- HELPERS ----------
 function randomPhone(country) {
   if (country === "PH") return "63" + "9" + randDigits(9);
   if (country === "VN") {
@@ -103,16 +101,32 @@ function randomPhone(country) {
 }
 
 function randDigits(len) {
-  let out = "";
-  for (let i = 0; i < len; i++) out += Math.floor(Math.random() * 10);
-  return out;
+  return Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join("");
 }
 
-// Random IPv4 (header-only)
+// Random generic IP
 function randomIP() {
   return `${r()}.${r()}.${r()}.${r()}`;
 }
 
 function r() {
   return Math.floor(Math.random() * 256);
+}
+
+// ------------------- PH IPs -------------------
+function randomPHIP() {
+  // Sample Philippine public IP ranges
+  const ranges = [
+    { start: [27, 72, 0, 0], end: [27, 72, 255, 255] },
+    { start: [180, 190, 0, 0], end: [180, 190, 255, 255] },
+    { start: [175, 136, 0, 0], end: [175, 136, 255, 255] },
+    { start: [202, 57, 0, 0], end: [202, 57, 255, 255] }
+  ];
+
+  const range = ranges[Math.floor(Math.random() * ranges.length)];
+  return range.map((s, i) => rand(s, range.end[i])).join(".");
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
