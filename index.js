@@ -1,8 +1,6 @@
 
 // main.js
 
-// ===== Quick hack for Node 18 / undici / cheerio =====
-global.File = class File {};
 // ======================================================
 
 const { spawn } = require("child_process");
