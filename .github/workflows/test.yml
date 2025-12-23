@@ -1,0 +1,1 @@
+curl -x http://country-philippines:XXXX@proxy.proxyverse.io:9200 https://api.api-pba1.com -v
