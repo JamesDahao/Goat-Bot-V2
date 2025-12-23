@@ -23,13 +23,23 @@ jobs:
           else
             echo "GitHub CLI and jq already installed"
           fi
+
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          # This ensures the proxy library is available even if not in package.json
+          npm install https-proxy-agent 
+
       - name: Start bot (5 hours)
+        env:
+          # Fallback: Many Node libraries look for these automatically
+          HTTP_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
+          HTTPS_PROXY: http://country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74@proxy.proxyverse.io:9200
         run: |
           echo "Running bot for 5 hours..."
           timeout 18000s npm start || echo "Bot stopped after timeout"
           echo "Bot process ended, continuing to cancel/restart steps."
+
       - name: Cancel previous workflow run (if exists)
         env:
           GH_TOKEN: ${{ secrets.PAT }}
@@ -44,10 +54,12 @@ jobs:
           else
             echo "No other runs found."
           fi
+
       - name: Wait before restart
         run: |
           echo "Waiting 60 seconds before restarting..."
           sleep 60
+
       - name: Restart workflow
         env:
           GH_TOKEN: ${{ secrets.PAT }}
