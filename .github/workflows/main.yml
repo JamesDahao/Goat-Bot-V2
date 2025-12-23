@@ -13,15 +13,12 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
-
     steps:
       - uses: actions/checkout@v3
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-
       - name: Install GitHub CLI & jq
         run: |
           if ! gh --version; then
@@ -30,29 +27,42 @@ jobs:
             echo "GitHub CLI and jq already installed"
           fi
 
+      # ----------------------------------------------------
+      # Add this step to define the PROXY_URL variable
+      # ----------------------------------------------------
+      - name: Set proxy URL
+        id: set_proxy
+        run: |
+          PROXY_USER_ENC=$(echo -n "country-philippines:17e3dd22-29f1-4435-a876-2ea72fea1a74" | jq -sRr @uri)
+          PROXY_URL="http://${PROXY_USER_ENC}@proxy.proxyverse.io:9200"
+          echo "PROXY_URL=${PROXY_URL}" >> $GITHUB_OUTPUT
+
+      # ----------------------------------------------------
+      # Add environment variables (http_proxy, https_proxy)
+      # to the relevant steps, referencing the output above
+      # ----------------------------------------------------
       - name: Install dependencies
+        env:
+          http_proxy: ${{ steps.set_proxy.outputs.PROXY_URL }}
+          https_proxy: ${{ steps.set_proxy.outputs.PROXY_URL }}
         run: npm install
 
       - name: Start bot (5 hours)
+        env:
+          http_proxy: ${{ steps.set_proxy.outputs.PROXY_URL }}
+          https_proxy: ${{ steps.set_proxy.outputs.PROXY_URL }}
         run: |
           echo "Running bot for 5 hours..."
           timeout 18000s npm start || echo "Bot stopped after timeout"
           echo "Bot process ended, continuing to cancel/restart steps."
 
+      # ... (rest of your workflow remains the same)
       - name: Cancel previous workflow run (if exists)
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
           echo "Checking for other in-progress runs..."
-          RUNNING=$(gh run list --workflow="Node.js CI" --status=in_progress --limit 1 --json databaseId,url | jq -r '.[0]')
-          if [ "$RUNNING" != "null" ]; then
-            RUN_ID=$(echo $RUNNING | jq -r '.databaseId')
-            RUN_URL=$(echo $RUNNING | jq -r '.url')
-            echo "Cancelling previous run: $RUN_URL"
-            gh run cancel "$RUN_ID"
-          else
-            echo "No other runs found."
-          fi
+          # ... (rest of the step)
 
       - name: Wait before restart
         run: |
