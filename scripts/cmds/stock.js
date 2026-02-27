@@ -8,7 +8,7 @@ let schedulerStarted = false;
 module.exports = {
 	config: {
 		name: "stock",
-		version: "5.0",
+		version: "1.0",
 		author: "James Dahao",
 		countDown: 5,
 		role: 0,
@@ -28,7 +28,6 @@ module.exports = {
 
 	onLoad: async function ({ api }) {
 
-		// Prevent double scheduler
 		if (schedulerStarted) return;
 		schedulerStarted = true;
 
@@ -85,7 +84,7 @@ module.exports = {
 				const apiRounded = roundTo5Min(apiTime);
 				const nowRounded = roundTo5Min(now);
 
-				// If API not synced to current 5-min block
+				// If API not synced yet → retry every 10s
 				if (apiRounded !== nowRounded) {
 					if (!waitingForMatch) {
 						waitingForMatch = true;
@@ -94,7 +93,7 @@ module.exports = {
 					return;
 				}
 
-				// Stop retry once synced
+				// Stop retry when synced
 				if (retryInterval) {
 					clearInterval(retryInterval);
 					retryInterval = null;
@@ -112,7 +111,7 @@ module.exports = {
 				if (goodSeeds.length === 0 && goodGear.length === 0)
 					return;
 
-				// Anti-duplicate signature
+				// Anti-duplicate check
 				const stockSignature = JSON.stringify({
 					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
 					gear: goodGear.map(g => `${g.name}:${g.quantity}`)
@@ -155,12 +154,26 @@ ${seedsText}
 ${gearText}
 `;
 
+				// Send to all groups + mention everyone
 				const threads = await api.getThreadList(100, null, ["INBOX"]);
 
 				for (const thread of threads) {
-					if (thread.isGroup) {
-						api.sendMessage(msg, thread.threadID);
-					}
+					if (!thread.isGroup) continue;
+
+					const threadInfo = await api.getThreadInfo(thread.threadID);
+
+					const mentions = threadInfo.participantIDs.map(id => ({
+						tag: "@",
+						id: id
+					}));
+
+					api.sendMessage(
+						{
+							body: msg + "\n\n🔔 @everyone",
+							mentions
+						},
+						thread.threadID
+					);
 				}
 
 			} catch (err) {
