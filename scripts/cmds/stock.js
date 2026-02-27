@@ -1,18 +1,36 @@
 const axios = require("axios");
 
+let lastStockSignature = null;
+let waitingForMatch = false;
+let retryInterval = null;
+let schedulerStarted = false;
+
 module.exports = {
 	config: {
-		name: "stockAuto",
-		version: "1.0",
+		name: "stock",
+		version: "5.0",
 		author: "James Dahao",
+		countDown: 5,
 		role: 0,
 		description: {
 			en: "Auto stock notifier"
 		},
-		category: "info"
+		category: "info",
+		guide: {
+			en: "{pn}"
+		}
+	},
+
+	// Required by GoatBot
+	onStart: async function () {
+		return;
 	},
 
 	onLoad: async function ({ api }) {
+
+		// Prevent double scheduler
+		if (schedulerStarted) return;
+		schedulerStarted = true;
 
 		const GOOD_SEEDS = [
 			"Cherry",
@@ -27,10 +45,6 @@ module.exports = {
 			"Super Sprinkler",
 			"Turbo Sprinkler"
 		];
-
-		let lastStockSignature = null;
-		let waitingForMatch = false;
-		let retryInterval = null;
 
 		function roundTo5Min(date) {
 			const d = new Date(date);
@@ -71,7 +85,7 @@ module.exports = {
 				const apiRounded = roundTo5Min(apiTime);
 				const nowRounded = roundTo5Min(now);
 
-				// If API time not synced yet → check every 10s
+				// If API not synced to current 5-min block
 				if (apiRounded !== nowRounded) {
 					if (!waitingForMatch) {
 						waitingForMatch = true;
@@ -80,7 +94,7 @@ module.exports = {
 					return;
 				}
 
-				// Stop retry interval once synced
+				// Stop retry once synced
 				if (retryInterval) {
 					clearInterval(retryInterval);
 					retryInterval = null;
@@ -98,17 +112,15 @@ module.exports = {
 				if (goodSeeds.length === 0 && goodGear.length === 0)
 					return;
 
-				// 🔥 Create stock signature for anti-duplicate
+				// Anti-duplicate signature
 				const stockSignature = JSON.stringify({
 					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
 					gear: goodGear.map(g => `${g.name}:${g.quantity}`)
 				});
 
-				// If same as last sent → do nothing
 				if (stockSignature === lastStockSignature)
 					return;
 
-				// Save new signature
 				lastStockSignature = stockSignature;
 
 				const phTime = apiTime.toLocaleString("en-PH", {
@@ -156,15 +168,12 @@ ${gearText}
 			}
 		}
 
-		async function startScheduler() {
-			const delay = getNextSchedule();
+		// Start scheduler aligned to 5min + 30sec
+		const delay = getNextSchedule();
 
-			setTimeout(() => {
-				checkStock();
-				setInterval(checkStock, 5 * 60 * 1000);
-			}, delay);
-		}
-
-		startScheduler();
+		setTimeout(() => {
+			checkStock();
+			setInterval(checkStock, 5 * 60 * 1000);
+		}, delay);
 	}
 };
