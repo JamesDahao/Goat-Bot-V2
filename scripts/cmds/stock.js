@@ -93,7 +93,7 @@ module.exports = {
 					return;
 				}
 
-				// Stop retry when synced
+				// Stop retry once synced
 				if (retryInterval) {
 					clearInterval(retryInterval);
 					retryInterval = null;
@@ -122,15 +122,40 @@ module.exports = {
 
 				lastStockSignature = stockSignature;
 
-				const phTime = apiTime.toLocaleString("en-PH", {
-					timeZone: "Asia/Manila",
+				// ✅ Format time as "February 27, 2026 at 04:55:00 - 5:00:00 PM"
+				const phDate = new Date(apiTime.toLocaleString("en-US", {
+					timeZone: "Asia/Manila"
+				}));
+
+				phDate.setSeconds(0);
+				phDate.setMilliseconds(0);
+				phDate.setMinutes(Math.floor(phDate.getMinutes() / 5) * 5);
+
+				const startTime = new Date(phDate);
+				const endTime = new Date(phDate);
+				endTime.setMinutes(endTime.getMinutes() + 5);
+
+				const datePart = startTime.toLocaleDateString("en-PH", {
 					year: "numeric",
 					month: "long",
-					day: "numeric",
+					day: "numeric"
+				});
+
+				const startTimePart = startTime.toLocaleTimeString("en-PH", {
 					hour: "2-digit",
 					minute: "2-digit",
-					second: "2-digit"
+					second: "2-digit",
+					hour12: true
 				});
+
+				const endTimePart = endTime.toLocaleTimeString("en-PH", {
+					hour: "numeric",
+					minute: "2-digit",
+					second: "2-digit",
+					hour12: true
+				});
+
+				const phTime = `${datePart} at ${startTimePart} - ${endTimePart}`;
 
 				const seedsText = goodSeeds.length
 					? goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.quantity}`).join("\n")
