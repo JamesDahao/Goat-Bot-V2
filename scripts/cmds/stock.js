@@ -17,11 +17,11 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		description: {
-			en: "Auto stock + weather notifier"
+			en: "Auto stock + weather notifier with mentions"
 		},
 		category: "info",
 		guide: {
-			en: "Automatic"
+			en: "No command, Automatic"
 		}
 	},
 
@@ -34,7 +34,7 @@ module.exports = {
 		if (schedulerStarted) return;
 		schedulerStarted = true;
 
-		// 🔥 Load last saved signature
+		// Load last sent stock signature
 		if (fs.existsSync(CACHE_PATH)) {
 			try {
 				const saved = JSON.parse(fs.readFileSync(CACHE_PATH));
@@ -42,19 +42,8 @@ module.exports = {
 			} catch {}
 		}
 
-		const GOOD_SEEDS = [
-			"Cherry",
-			"Cabbage",
-			"Potato",
-			"Plum",
-			"Banana",
-			"Wheat"
-		];
-
-		const GOOD_GEAR = [
-			"Super Sprinkler",
-			"Turbo Sprinkler"
-		];
+		const GOOD_SEEDS = ["Cherry", "Cabbage", "Potato", "Plum", "Banana", "Wheat"];
+		const GOOD_GEAR = ["Super Sprinkler", "Turbo Sprinkler"];
 
 		function saveSignature(signature) {
 			fs.writeFileSync(CACHE_PATH, JSON.stringify({ signature }));
@@ -70,28 +59,18 @@ module.exports = {
 
 		function getNextSchedule() {
 			const now = new Date();
-			const minutes = now.getMinutes();
-			const next5 = Math.ceil(minutes / 5) * 5;
-
 			const next = new Date(now);
+			const next5 = Math.ceil(now.getMinutes() / 5) * 5;
 			next.setMinutes(next5);
 			next.setSeconds(30);
 			next.setMilliseconds(0);
-
-			if (next <= now) {
-				next.setMinutes(next.getMinutes() + 5);
-			}
-
+			if (next <= now) next.setMinutes(next.getMinutes() + 5);
 			return next - now;
 		}
 
 		async function checkStock() {
 			try {
-				const res = await axios.get(
-					"https://stock.gardenhorizonswiki.com/stock.json",
-					{ headers: { "User-Agent": "Mozilla/5.0" } }
-				);
-
+				const res = await axios.get("https://garden-horizons-stock.dawidfc.workers.dev/api/stock", { headers: { "User-Agent": "Mozilla/5.0" } });
 				if (!res.data.ok) return;
 
 				const data = res.data.data;
@@ -103,7 +82,6 @@ module.exports = {
 				const apiRounded = roundTo5Min(apiTime);
 				const nowRounded = roundTo5Min(now);
 
-				// Retry until synced
 				if (apiRounded !== nowRounded) {
 					if (!waitingForMatch) {
 						waitingForMatch = true;
@@ -118,39 +96,25 @@ module.exports = {
 				}
 				waitingForMatch = false;
 
-				const goodSeeds = (data.seeds || []).filter(s =>
-					GOOD_SEEDS.includes(s.name) && s.quantity > 0
-				);
-
-				const goodGear = (data.gear || []).filter(g =>
-					GOOD_GEAR.includes(g.name) && g.quantity > 0
-				);
-
+				// Filter good stock
+				const goodSeeds = (data.seeds || []).filter(s => GOOD_SEEDS.includes(s.name) && s.quantity > 0);
+				const goodGear = (data.gear || []).filter(g => GOOD_GEAR.includes(g.name) && g.quantity > 0);
 				const weather = data.weather || null;
 
-				if (
-					goodSeeds.length === 0 &&
-					goodGear.length === 0 &&
-					(!weather || !weather.active)
-				) return;
+				if (goodSeeds.length === 0 && goodGear.length === 0 && (!weather || !weather.active)) return;
 
+				// Anti-duplicate
 				const stockSignature = JSON.stringify({
 					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
 					gear: goodGear.map(g => `${g.name}:${g.quantity}`),
 					weather: weather && weather.active ? weather.type : null
 				});
-
-				if (stockSignature === lastStockSignature)
-					return;
-
+				if (stockSignature === lastStockSignature) return;
 				lastStockSignature = stockSignature;
 				saveSignature(stockSignature);
 
-				// 🇵🇭 Manila time
-				const phDate = new Date(apiTime.toLocaleString("en-US", {
-					timeZone: "Asia/Manila"
-				}));
-
+				// Manila time formatting
+				const phDate = new Date(apiTime.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 				phDate.setSeconds(0);
 				phDate.setMilliseconds(0);
 				phDate.setMinutes(Math.floor(phDate.getMinutes() / 5) * 5);
@@ -159,42 +123,17 @@ module.exports = {
 				const endTime = new Date(phDate);
 				endTime.setMinutes(endTime.getMinutes() + 5);
 
-				const datePart = startTime.toLocaleDateString("en-PH", {
-					year: "numeric",
-					month: "long",
-					day: "numeric"
-				});
-
-				const startTimePart = startTime.toLocaleTimeString("en-PH", {
-					hour: "2-digit",
-					minute: "2-digit",
-					second: "2-digit",
-					hour12: true
-				});
-
-				const endTimePart = endTime.toLocaleTimeString("en-PH", {
-					hour: "numeric",
-					minute: "2-digit",
-					second: "2-digit",
-					hour12: true
-				});
-
+				const datePart = startTime.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+				const startTimePart = startTime.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+				const endTimePart = endTime.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
 				const phTime = `${datePart} at ${startTimePart} - ${endTimePart}`;
 
-				const seedsText = goodSeeds.map(s =>
-					`│ ▪ ${s.name} ➩ ${s.quantity}`
-				).join("\n") || "│ None";
-
-				const gearText = goodGear.map(g =>
-					`│ ▪ ${g.name} ➩ ${g.quantity}`
-				).join("\n") || "│ None";
+				const seedsText = goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.quantity}`).join("\n") || "│ None";
+				const gearText = goodGear.map(g => `│ ▪ ${g.name} ➩ ${g.quantity}`).join("\n") || "│ None";
 
 				let weatherText = "";
 				if (weather && weather.active) {
-					weatherText =
-`\n🌦 WEATHER ALERT: ${weather.type.toUpperCase()}
-${(weather.effects || []).map(e => `• ${e}`).join("\n")}
-`;
+					weatherText = `\n🌦 WEATHER ALERT: ${weather.type.toUpperCase()}\n${(weather.effects || []).map(e => `• ${e}`).join("\n")}\n`;
 				}
 
 				const msg =
@@ -214,13 +153,14 @@ ${weatherText}
 
 				if (!msg.trim()) return;
 
+				// Send to all groups with mentions
 				const threads = await api.getThreadList(100, null, ["INBOX"]);
-
 				for (const thread of threads) {
 					if (!thread.isGroup) continue;
-
+					const threadInfo = await api.getThreadInfo(thread.threadID);
+					const mentions = threadInfo.participantIDs.map(id => ({ tag: "@", id }));
 					try {
-						api.sendMessage(msg, thread.threadID);
+						api.sendMessage({ body: msg + "\n🔔 @everyone", mentions }, thread.threadID);
 					} catch (err) {
 						console.log("Send error:", err.message);
 					}
@@ -231,8 +171,8 @@ ${weatherText}
 			}
 		}
 
+		// Start scheduler aligned to 5min + 30sec
 		const delay = getNextSchedule();
-
 		setTimeout(() => {
 			checkStock();
 			setInterval(checkStock, 5 * 60 * 1000);
