@@ -17,11 +17,10 @@ module.exports = {
 		},
 		category: "info",
 		guide: {
-			en: "{pn}"
+			en: "No command, Auto."
 		}
 	},
 
-	// Required by GoatBot
 	onStart: async function () {
 		return;
 	},
@@ -31,6 +30,7 @@ module.exports = {
 		if (schedulerStarted) return;
 		schedulerStarted = true;
 
+		// 🔥 EDIT THESE IF YOU WANT
 		const GOOD_SEEDS = [
 			"Cherry",
 			"Cabbage",
@@ -72,19 +72,25 @@ module.exports = {
 
 		async function checkStock() {
 			try {
+				// 🔥 prevent 403 cache
 				const res = await axios.get(
-					"https://stock.gardenhorizonswiki.com/stock.json"
+					"https://stock.gardenhorizonswiki.com/stock.json",
+					{
+						headers: {
+							"User-Agent": "Mozilla/5.0"
+						}
+					}
 				);
 
-				const data = res.data.data;
+				const data = res.data;
 
-				const apiTime = new Date(data.lastGlobalUpdate);
+				const apiTime = new Date(data.updatedAt);
 				const now = new Date();
 
 				const apiRounded = roundTo5Min(apiTime);
 				const nowRounded = roundTo5Min(now);
 
-				// If API not synced yet → retry every 10s
+				// ⏳ If API not synced yet → retry every 10s
 				if (apiRounded !== nowRounded) {
 					if (!waitingForMatch) {
 						waitingForMatch = true;
@@ -100,21 +106,30 @@ module.exports = {
 				}
 				waitingForMatch = false;
 
-				const goodSeeds = data.seeds.filter(s =>
-					GOOD_SEEDS.includes(s.name)
+				// 🔥 NEW API STRUCTURE FIX
+				const items = data.items || [];
+
+				const goodSeeds = items.filter(
+					i =>
+						i.category === "seed" &&
+						i.currentStock > 0 &&
+						GOOD_SEEDS.includes(i.name)
 				);
 
-				const goodGear = data.gear.filter(g =>
-					GOOD_GEAR.includes(g.name)
+				const goodGear = items.filter(
+					i =>
+						i.category === "gear" &&
+						i.currentStock > 0 &&
+						GOOD_GEAR.includes(i.name)
 				);
 
 				if (goodSeeds.length === 0 && goodGear.length === 0)
 					return;
 
-				// Anti-duplicate check
+				// 🛑 Anti duplicate
 				const stockSignature = JSON.stringify({
-					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
-					gear: goodGear.map(g => `${g.name}:${g.quantity}`)
+					seeds: goodSeeds.map(s => `${s.name}:${s.currentStock}`),
+					gear: goodGear.map(g => `${g.name}:${g.currentStock}`)
 				});
 
 				if (stockSignature === lastStockSignature)
@@ -122,7 +137,7 @@ module.exports = {
 
 				lastStockSignature = stockSignature;
 
-				// ✅ Format time as "February 27, 2026 at 04:55:00 - 5:00:00 PM"
+				// 🇵🇭 Manila Time Formatting
 				const phDate = new Date(apiTime.toLocaleString("en-US", {
 					timeZone: "Asia/Manila"
 				}));
@@ -158,12 +173,12 @@ module.exports = {
 				const phTime = `${datePart} at ${startTimePart} - ${endTimePart}`;
 
 				const seedsText = goodSeeds.length
-					? goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.quantity}`).join("\n")
-					: "";
+					? goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.currentStock}`).join("\n")
+					: "│ None";
 
 				const gearText = goodGear.length
-					? goodGear.map(g => `│ ▪ ${g.name} ➩ ${g.quantity}`).join("\n")
-					: "";
+					? goodGear.map(g => `│ ▪ ${g.name} ➩ ${g.currentStock}`).join("\n")
+					: "│ None";
 
 				const msg =
 `╔═════•| 🌾 |•═════╗
@@ -179,26 +194,34 @@ ${seedsText}
 ${gearText}
 `;
 
-				// Send to all groups + mention everyone
+				// 🔔 SEND TO GROUPS (SAFE MENTION FIX)
 				const threads = await api.getThreadList(100, null, ["INBOX"]);
 
 				for (const thread of threads) {
 					if (!thread.isGroup) continue;
 
-					const threadInfo = await api.getThreadInfo(thread.threadID);
+					try {
+						const threadInfo = await api.getThreadInfo(thread.threadID);
+						if (!threadInfo.participantIDs.length) continue;
 
-					const mentions = threadInfo.participantIDs.map(id => ({
-						tag: "@",
-						id: id
-					}));
+						const firstUser = threadInfo.participantIDs[0];
 
-					api.sendMessage(
-						{
-							body: msg + "\n\n🔔 @everyone",
-							mentions
-						},
-						thread.threadID
-					);
+						api.sendMessage(
+							{
+								body: msg + "\n\n🔔 @everyone",
+								mentions: [
+									{
+										tag: "@everyone",
+										id: firstUser
+									}
+								]
+							},
+							thread.threadID
+						);
+
+					} catch (err) {
+						console.log("Send error:", err.message);
+					}
 				}
 
 			} catch (err) {
@@ -206,7 +229,7 @@ ${gearText}
 			}
 		}
 
-		// Start scheduler aligned to 5min + 30sec
+		// 🚀 Start scheduler aligned to 5min + 30sec
 		const delay = getNextSchedule();
 
 		setTimeout(() => {
