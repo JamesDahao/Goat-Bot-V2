@@ -17,7 +17,7 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		description: {
-			en: "Auto stock + weather notifier with mentions"
+			en: "Auto stock notifier with mentions"
 		},
 		category: "info",
 		guide: {
@@ -99,15 +99,13 @@ module.exports = {
 				// Filter good stock
 				const goodSeeds = (data.seeds || []).filter(s => GOOD_SEEDS.includes(s.name) && s.quantity > 0);
 				const goodGear = (data.gear || []).filter(g => GOOD_GEAR.includes(g.name) && g.quantity > 0);
-				const weather = data.weather || null;
 
-				if (goodSeeds.length === 0 && goodGear.length === 0 && (!weather || !weather.active)) return;
+				if (goodSeeds.length === 0 && goodGear.length === 0) return;
 
 				// Anti-duplicate
 				const stockSignature = JSON.stringify({
 					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
-					gear: goodGear.map(g => `${g.name}:${g.quantity}`),
-					weather: weather && weather.active ? weather.type : null
+					gear: goodGear.map(g => `${g.name}:${g.quantity}`)
 				});
 				if (stockSignature === lastStockSignature) return;
 				lastStockSignature = stockSignature;
@@ -131,11 +129,6 @@ module.exports = {
 				const seedsText = goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.quantity}`).join("\n") || "│ None";
 				const gearText = goodGear.map(g => `│ ▪ ${g.name} ➩ ${g.quantity}`).join("\n") || "│ None";
 
-				let weatherText = "";
-				if (weather && weather.active) {
-					weatherText = `\n🌦 WEATHER ALERT: ${weather.type.toUpperCase()}\n${(weather.effects || []).map(e => `• ${e}`).join("\n")}\n`;
-				}
-
 				const msg =
 `╔═════•| 🌾 |•═════╗
  GOOD STOCK DETECTED
@@ -148,7 +141,6 @@ ${seedsText}
 
 🛠 GEAR:
 ${gearText}
-${weatherText}
 `;
 
 				if (!msg.trim()) return;
