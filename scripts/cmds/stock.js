@@ -70,7 +70,7 @@ module.exports = {
 
 		async function checkStock() {
 			try {
-				const res = await axios.get("https://garden-horizons-stock.dawidfc.workers.dev/api/stock", { headers: { "User-Agent": "Mozilla/5.0" } });
+				const res = await axios.get("https://stock.gardenhorizonswiki.com/stock.json", { headers: { "User-Agent": "Mozilla/5.0" } });
 				if (!res.data.ok) return;
 
 				const data = res.data.data;
