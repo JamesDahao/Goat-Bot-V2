@@ -1,4 +1,8 @@
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+
+const CACHE_PATH = path.join(__dirname, "stockCache.json");
 
 let lastStockSignature = null;
 let waitingForMatch = false;
@@ -13,11 +17,11 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		description: {
-			en: "Auto stock notifier"
+			en: "Auto stock + weather notifier"
 		},
 		category: "info",
 		guide: {
-			en: "No command, Auto."
+			en: "Automatic"
 		}
 	},
 
@@ -30,7 +34,14 @@ module.exports = {
 		if (schedulerStarted) return;
 		schedulerStarted = true;
 
-		// 🔥 EDIT THESE IF YOU WANT
+		// 🔥 Load last saved signature
+		if (fs.existsSync(CACHE_PATH)) {
+			try {
+				const saved = JSON.parse(fs.readFileSync(CACHE_PATH));
+				lastStockSignature = saved.signature || null;
+			} catch {}
+		}
+
 		const GOOD_SEEDS = [
 			"Cherry",
 			"Cabbage",
@@ -44,6 +55,10 @@ module.exports = {
 			"Super Sprinkler",
 			"Turbo Sprinkler"
 		];
+
+		function saveSignature(signature) {
+			fs.writeFileSync(CACHE_PATH, JSON.stringify({ signature }));
+		}
 
 		function roundTo5Min(date) {
 			const d = new Date(date);
@@ -72,25 +87,23 @@ module.exports = {
 
 		async function checkStock() {
 			try {
-				// 🔥 prevent 403 cache
 				const res = await axios.get(
 					"https://stock.gardenhorizonswiki.com/stock.json",
-					{
-						headers: {
-							"User-Agent": "Mozilla/5.0"
-						}
-					}
+					{ headers: { "User-Agent": "Mozilla/5.0" } }
 				);
 
-				const data = res.data;
+				if (!res.data.ok) return;
 
-				const apiTime = new Date(data.updatedAt);
+				const data = res.data.data;
+				if (!data) return;
+
+				const apiTime = new Date(data.lastGlobalUpdate);
 				const now = new Date();
 
 				const apiRounded = roundTo5Min(apiTime);
 				const nowRounded = roundTo5Min(now);
 
-				// ⏳ If API not synced yet → retry every 10s
+				// Retry until synced
 				if (apiRounded !== nowRounded) {
 					if (!waitingForMatch) {
 						waitingForMatch = true;
@@ -99,45 +112,41 @@ module.exports = {
 					return;
 				}
 
-				// Stop retry once synced
 				if (retryInterval) {
 					clearInterval(retryInterval);
 					retryInterval = null;
 				}
 				waitingForMatch = false;
 
-				// 🔥 NEW API STRUCTURE FIX
-				const items = data.items || [];
-
-				const goodSeeds = items.filter(
-					i =>
-						i.category === "seed" &&
-						i.currentStock > 0 &&
-						GOOD_SEEDS.includes(i.name)
+				const goodSeeds = (data.seeds || []).filter(s =>
+					GOOD_SEEDS.includes(s.name) && s.quantity > 0
 				);
 
-				const goodGear = items.filter(
-					i =>
-						i.category === "gear" &&
-						i.currentStock > 0 &&
-						GOOD_GEAR.includes(i.name)
+				const goodGear = (data.gear || []).filter(g =>
+					GOOD_GEAR.includes(g.name) && g.quantity > 0
 				);
 
-				if (goodSeeds.length === 0 && goodGear.length === 0)
-					return;
+				const weather = data.weather || null;
 
-				// 🛑 Anti duplicate
+				if (
+					goodSeeds.length === 0 &&
+					goodGear.length === 0 &&
+					(!weather || !weather.active)
+				) return;
+
 				const stockSignature = JSON.stringify({
-					seeds: goodSeeds.map(s => `${s.name}:${s.currentStock}`),
-					gear: goodGear.map(g => `${g.name}:${g.currentStock}`)
+					seeds: goodSeeds.map(s => `${s.name}:${s.quantity}`),
+					gear: goodGear.map(g => `${g.name}:${g.quantity}`),
+					weather: weather && weather.active ? weather.type : null
 				});
 
 				if (stockSignature === lastStockSignature)
 					return;
 
 				lastStockSignature = stockSignature;
+				saveSignature(stockSignature);
 
-				// 🇵🇭 Manila Time Formatting
+				// 🇵🇭 Manila time
 				const phDate = new Date(apiTime.toLocaleString("en-US", {
 					timeZone: "Asia/Manila"
 				}));
@@ -172,13 +181,21 @@ module.exports = {
 
 				const phTime = `${datePart} at ${startTimePart} - ${endTimePart}`;
 
-				const seedsText = goodSeeds.length
-					? goodSeeds.map(s => `│ ▪ ${s.name} ➩ ${s.currentStock}`).join("\n")
-					: "│ None";
+				const seedsText = goodSeeds.map(s =>
+					`│ ▪ ${s.name} ➩ ${s.quantity}`
+				).join("\n") || "│ None";
 
-				const gearText = goodGear.length
-					? goodGear.map(g => `│ ▪ ${g.name} ➩ ${g.currentStock}`).join("\n")
-					: "│ None";
+				const gearText = goodGear.map(g =>
+					`│ ▪ ${g.name} ➩ ${g.quantity}`
+				).join("\n") || "│ None";
+
+				let weatherText = "";
+				if (weather && weather.active) {
+					weatherText =
+`\n🌦 WEATHER ALERT: ${weather.type.toUpperCase()}
+${(weather.effects || []).map(e => `• ${e}`).join("\n")}
+`;
+				}
 
 				const msg =
 `╔═════•| 🌾 |•═════╗
@@ -192,33 +209,18 @@ ${seedsText}
 
 🛠 GEAR:
 ${gearText}
+${weatherText}
 `;
 
-				// 🔔 SEND TO GROUPS (SAFE MENTION FIX)
+				if (!msg.trim()) return;
+
 				const threads = await api.getThreadList(100, null, ["INBOX"]);
 
 				for (const thread of threads) {
 					if (!thread.isGroup) continue;
 
 					try {
-						const threadInfo = await api.getThreadInfo(thread.threadID);
-						if (!threadInfo.participantIDs.length) continue;
-
-						const firstUser = threadInfo.participantIDs[0];
-
-						api.sendMessage(
-							{
-								body: msg + "\n\n🔔 @everyone",
-								mentions: [
-									{
-										tag: "@everyone",
-										id: firstUser
-									}
-								]
-							},
-							thread.threadID
-						);
-
+						api.sendMessage(msg, thread.threadID);
 					} catch (err) {
 						console.log("Send error:", err.message);
 					}
@@ -229,7 +231,6 @@ ${gearText}
 			}
 		}
 
-		// 🚀 Start scheduler aligned to 5min + 30sec
 		const delay = getNextSchedule();
 
 		setTimeout(() => {
