@@ -73,7 +73,7 @@ module.exports = {
 		async function checkStock() {
 			try {
 				const res = await axios.get(
-					"https://garden-horizons-stock.dawidfc.workers.dev/api/stock"
+					"https://stock.gardenhorizonswiki.com/stock.json"
 				);
 
 				const data = res.data.data;
