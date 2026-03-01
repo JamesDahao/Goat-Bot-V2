@@ -70,7 +70,21 @@ module.exports = {
 
 		async function checkStock() {
 			try {
-				const res = await axios.get("https://stock.gardenhorizonswiki.com/stock.json", { headers: { "User-Agent": "Mozilla/5.0" } });
+				const res = await axios.get("https://stock.gardenhorizonswiki.com/stock.json", {
+	headers: {
+		"Accept": "application/json, text/plain, */*",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Cache-Control": "no-cache",
+		"Pragma": "no-cache",
+		"Connection": "keep-alive",
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+		"Referer": "https://gardenhorizonswiki.com/",
+		"Origin": "https://gardenhorizonswiki.com/",
+		"Sec-Fetch-Dest": "empty",
+		"Sec-Fetch-Mode": "cors",
+		"Sec-Fetch-Site": "same-site"
+	}
+});
 				if (!res.data.ok) return;
 
 				const data = res.data.data;
