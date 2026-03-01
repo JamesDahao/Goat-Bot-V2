@@ -42,7 +42,7 @@ module.exports = {
 			} catch {}
 		}
 
-		const GOOD_SEEDS = ["Cherry", "Cabbage", "Potato", "Plum", "Banana", "Wheat"];
+		const GOOD_SEEDS = ["Cherry", "Cabbage", "Potato", "Plum", "Banana", "Wheat", "Bamboo", "Mango"];
 		const GOOD_GEAR = ["Super Sprinkler", "Turbo Sprinkler"];
 
 		function saveSignature(signature) {
