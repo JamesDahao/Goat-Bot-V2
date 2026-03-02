@@ -3,15 +3,17 @@ module.exports = {
 		name: "automessage",
 		version: "1.0",
 		author: "James Dahao",
-		description: "Send message automatically when bot starts",
+		description: "Auto send restart message",
 		category: "system",
-		role: 0
+		role: 0,
+		guide: "{pn}"
 	},
+	
+	onStart: async function () {},
 
 	onLoad: async function ({ api }) {
 		try {
 			setTimeout(async () => {
-
 				const threads = await api.getThreadList(100, null, ["INBOX"]);
 				const startTime = new Date().toLocaleString();
 
@@ -30,11 +32,11 @@ Thank you for waiting!`,
 					}
 				}
 
-				console.log("✅ Auto restart message sent.");
-			}, 5000); // wait 5 seconds
-
-		} catch (error) {
-			console.error("❌ Automessage error:", error);
+				console.log("✅ Restart message sent to all groups.");
+			}, 5000);
+		}
+		catch (err) {
+			console.error("❌ Automessage error:", err);
 		}
 	}
 };
