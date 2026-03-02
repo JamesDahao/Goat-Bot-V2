@@ -4,6 +4,7 @@ module.exports = {
 		version: "1.0",
 		author: "James Dahao",
 		description: "Automatically sends restart message when bot starts",
+		category: "system",
 		role: 0
 	},
 
@@ -18,7 +19,7 @@ module.exports = {
 `🤖 𝗕𝗢𝗧 𝗥𝗘𝗦𝗧𝗔𝗥𝗧𝗘𝗗
 
 ━━━━━━━━━━━━━━
-📋 Bot restarts every 5 hours.
+✅ Bot restarts every 5 hours.
 ━━━━━━━━━━━━━━
 
 Thank you for waiting!`,
