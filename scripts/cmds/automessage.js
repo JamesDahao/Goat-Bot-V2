@@ -3,19 +3,21 @@ module.exports = {
 		name: "automessage",
 		version: "1.0",
 		author: "James Dahao",
-		description: "Automatically sends restart message when bot starts",
+		description: "Send message automatically when bot starts",
 		category: "system",
 		role: 0
 	},
 
-	onStart: async function ({ api }) {
+	onLoad: async function ({ api }) {
 		try {
-			const threads = await api.getThreadList(100, null, ["INBOX"]);
-			const startTime = new Date().toLocaleString();
+			setTimeout(async () => {
 
-			for (const thread of threads) {
-				if (thread.isGroup) {
-					await api.sendMessage(
+				const threads = await api.getThreadList(100, null, ["INBOX"]);
+				const startTime = new Date().toLocaleString();
+
+				for (const thread of threads) {
+					if (thread.isGroup) {
+						await api.sendMessage(
 `🤖 𝗕𝗢𝗧 𝗥𝗘𝗦𝗧𝗔𝗥𝗧𝗘𝗗
 
 ━━━━━━━━━━━━━━
@@ -23,15 +25,16 @@ module.exports = {
 ━━━━━━━━━━━━━━
 
 Thank you for waiting!`,
-						thread.threadID
-					);
+							thread.threadID
+						);
+					}
 				}
-			}
 
-			console.log("✅ Auto restart message sent to all groups.");
-		}
-		catch (error) {
-			console.error("❌ Error sending auto message:", error);
+				console.log("✅ Auto restart message sent.");
+			}, 5000); // wait 5 seconds
+
+		} catch (error) {
+			console.error("❌ Automessage error:", error);
 		}
 	}
 };
